@@ -1,0 +1,120 @@
+USE [DMAP_JIT_Permissions]
+GO
+
+/****** Object:  StoredProcedure [JITA].[p_AanvraagVerwerken]    Script Date: 16-12-2025 14:09:08 ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+
+
+-- =============================================	
+-- Date       | Author					| Description 
+-- 2025-12-08 | Brigitte Burgemeestre	| Created 
+
+-- =============================================
+CREATE OR ALTER     PROCEDURE [JITA].[p_AanvraagVerwerken]
+		@WebDataString nvarchar(1000) NULL
+AS
+BEGIN
+
+	DECLARE	@Puik_ID nvarchar(255);
+	DECLARE	@StartDatum Datetime=GETDATE();
+	DECLARE @Akkoord bit;
+	DECLARE @AanvraagID bigint;
+	DECLARE @MotivatieAanvrager nvarchar (255);
+	DECLARE @PIM_ROL_Lijst nvarchar (255);
+	DECLARE @Relatie_PIM_ROL_ID bigint;
+
+	-- Tijdelijk neergezet om aan te geven dat we uit een webdatastring de Puik_ID, Motivatie en  PIM_ROL_lijst halen 
+	-- Maak hier nog wat leuks van, als we weten hoe we de webdata(String) eruit komt te zien 
+	SET @Puik_ID= (SELECT SUBSTRING (@WebDataString,CHARINDEX ('Puik_ID',@WebDataString),6))
+	SET @MotivatieAanvrager= (SELECT SUBSTRING (@WebDataString,CHARINDEX ('Motivatie',@WebDataString),255))
+	SET @PIM_ROL_Lijst= (SELECT SUBSTRING (@WebDataString,CHARINDEX ('Relatie_PIM_ROL_ID',@WebDataString),255))
+
+	/*Zet de aangevraagde Relatie_PIM_ROL_ID's en hun metadata in een temptabel*/
+	DROP TABLE IF EXISTS #PIM_ROL_LIJST
+	CREATE TABLE #PIM_ROL_LIJST(
+	AanvraagID bigint,
+    Relatie_PIM_ROL_ID bigint,
+	PIM_ROL_ID bigint,
+	AutorisatieNiveau int
+	)
+	INSERT INTO #PIM_ROL_LIJST (Relatie_PIM_ROL_ID) 
+    SELECT value as Relatie_PIM_ROL_ID
+	FROM string_split(@PIM_ROL_Lijst,',');
+
+	    --Haal de bijbehorende PIM_ROL_ID's en autorisatieniveaus op   
+	  UPDATE #PIM_ROL_LIJST 
+	  SET	PIM_ROL_ID=R.PIM_ROL_ID, 
+			AutorisatieNiveau=P.AutorisatieNiveau
+	  FROM #PIM_ROL_LIJST L
+	  INNER JOIN [JITA].Relatie_PIM_Rol R
+	  ON L.Relatie_PIM_ROL_ID=R.Relatie_PIM_Rol_ID
+	  INNER JOIN [JITA].[PIM_Rollen]P
+	  ON R.PIM_ROL_ID=P.PIM_ROL_ID
+	  
+
+	  --Als er een PIM_ROL in de aanvraag zit waarbij het authorisatieniveau groter is dan 0, 
+	  --dan moet de aanvraag worden goedgekeurd (Akkoord=1)
+	  SET @Akkoord = (	SELECT CASE WHEN MAX(AutorisatieNiveau)>0 THEN 1 ELSE 0 END
+						FROM #PIM_ROL_LIJST
+	  )
+	  /*Maak de aanvraag aan en geef het Aanvraag_ID terug om AanvraagItems aan te kunnen maken*/
+
+	EXECUTE [JITA].[p_AanvraagAanmaken]
+	   @Puik_ID=@Puik_ID
+      ,@MotivatieAanvrager=@MotivatieAanvrager
+	  ,@StartDatum=@StartDatum
+	  ,@AanvraagID = @AanvraagID output  
+	  
+	  SET @AanvraagID=@AanvraagID
+	  
+	  UPDATE #PIM_ROL_LIJST 
+	  SET AanvraagID=@AanvraagID
+
+
+
+	  /*Maak voor elk record in #PIM_ROL_Lijst een AanvraagItem aan*/
+
+	  	DECLARE curTables CURSOR FOR
+		SELECT AanvraagID, Relatie_PIM_ROL_ID
+		FROM #PIM_ROL_LIJST
+	
+	OPEN curTables
+		FETCH NEXT FROM curTables INTO @AanvraagID, @Relatie_PIM_ROL_ID
+
+	WHILE @@FETCH_STATUS = 0
+	BEGIN
+
+	  EXECUTE [JITA].[p_AanvraagItemAanmaken] 
+      @Aanvraag_ID=@AanvraagID
+      ,@Relatie_PIM_ROL_ID=@Relatie_PIM_ROL_ID
+	  FETCH NEXT FROM curTables INTO @AanvraagID, @Relatie_PIM_ROL_ID
+
+	END
+	CLOSE curTables
+	DEALLOCATE curTables
+
+/*Afhankelijk van het autorisatieniveau: ken de PIM rol(len) toe of start autorisatie proces */
+
+	IF @Akkoord=0
+	    BEGIN 
+		 Update [JITA].[Aanvragen]
+		 SET AanvraagEindDatum=GETDATE(), AanvraagStatus='Akkoord'
+		 WHERE Aanvraag_ID=@AanvraagID;
+
+		EXECUTE [JITA].[p_PIM_RolToekennen] 
+		@Aanvraag_ID=@AanvraagID
+		END
+	ELSE
+		PRINT N'Hier moet een procedure komen om aanvragen goed te keuren';
+
+	DROP TABLE IF EXISTS #PIM_ROL_LIJST
+
+END
+GO
+
+
