@@ -97,8 +97,7 @@ BEGIN
             
             -- Update grant status
             UPDATE [jit].[Grants]
-            SET Status = 'Expired',
-                UpdatedUtc = GETUTCDATE()
+            SET Status = 'Expired'
             WHERE GrantId = @GrantId;
             
             -- Log audit
