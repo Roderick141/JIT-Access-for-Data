@@ -1,0 +1,325 @@
+"""
+JIT Access Framework - Flask Application
+Main application file
+"""
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
+from config import Config
+from utils.db import get_db_connection, close_db, execute_procedure, execute_query
+from utils.auth import get_current_user, login_required, admin_required, approver_required
+import os
+
+app = Flask(__name__)
+app.config.from_object(Config)
+
+# Register close_db to be called when request ends
+app.teardown_appcontext(close_db)
+
+@app.route('/')
+def index():
+    """Redirect to dashboard"""
+    user = get_current_user()
+    if user:
+        return redirect(url_for('user_dashboard'))
+    return redirect(url_for('login'))
+
+@app.route('/login')
+def login():
+    """Login page (Windows Auth - auto-redirect if authenticated)"""
+    user = get_current_user()
+    if user:
+        session['user'] = user
+        return redirect(url_for('user_dashboard'))
+    return render_template('login.html')
+
+# ==================== USER ROUTES ====================
+
+@app.route('/user/dashboard')
+@login_required
+def user_dashboard():
+    """User dashboard - view active grants and expiry dates"""
+    user = session.get('user')
+    if not user:
+        return redirect(url_for('login'))
+    
+    try:
+        # Get active grants for user
+        grants = execute_procedure('jit.sp_Grant_ListActiveForUser', {'UserId': user['UserId']})
+        
+        # Get pending requests
+        requests = execute_procedure('jit.sp_Request_ListForUser', {'UserId': user['UserId']})
+        
+        return render_template('user/dashboard.html', 
+                             user=user, 
+                             grants=grants or [], 
+                             requests=requests or [])
+    except Exception as e:
+        flash(f'Error loading dashboard: {str(e)}', 'error')
+        return render_template('user/dashboard.html', user=user, grants=[], requests=[])
+
+@app.route('/user/request', methods=['GET', 'POST'])
+@login_required
+def user_request():
+    """Request access form"""
+    user = session.get('user')
+    if not user:
+        return redirect(url_for('login'))
+    
+    if request.method == 'POST':
+        try:
+            role_id = int(request.form.get('role_id'))
+            duration_minutes = int(request.form.get('duration_minutes'))
+            justification = request.form.get('justification', '')
+            ticket_ref = request.form.get('ticket_ref', '')
+            
+            result = execute_procedure('jit.sp_Request_Create', {
+                'UserId': user['UserId'],
+                'RoleId': role_id,
+                'RequestedDurationMinutes': duration_minutes,
+                'Justification': justification,
+                'TicketRef': ticket_ref if ticket_ref else None
+            })
+            
+            flash('Request submitted successfully!', 'success')
+            return redirect(url_for('user_dashboard'))
+        except Exception as e:
+            flash(f'Error submitting request: {str(e)}', 'error')
+    
+    # Get requestable roles
+    try:
+        roles = execute_procedure('jit.sp_Role_ListRequestable', {'UserId': user['UserId']})
+    except Exception as e:
+        roles = []
+        flash(f'Error loading roles: {str(e)}', 'error')
+    
+    return render_template('user/request.html', user=user, roles=roles or [])
+
+@app.route('/user/history')
+@login_required
+def user_history():
+    """Request history"""
+    user = session.get('user')
+    if not user:
+        return redirect(url_for('login'))
+    
+    try:
+        requests = execute_procedure('jit.sp_Request_ListForUser', {'UserId': user['UserId']})
+    except Exception as e:
+        requests = []
+        flash(f'Error loading history: {str(e)}', 'error')
+    
+    return render_template('user/history.html', user=user, requests=requests or [])
+
+@app.route('/user/cancel/<int:request_id>')
+@login_required
+def user_cancel(request_id):
+    """Cancel pending request"""
+    user = session.get('user')
+    if not user:
+        return redirect(url_for('login'))
+    
+    try:
+        execute_procedure('jit.sp_Request_Cancel', {'RequestId': request_id, 'UserId': user['UserId']})
+        flash('Request cancelled successfully', 'success')
+    except Exception as e:
+        flash(f'Error cancelling request: {str(e)}', 'error')
+    
+    return redirect(url_for('user_dashboard'))
+
+# ==================== APPROVER ROUTES ====================
+
+@app.route('/approver/dashboard')
+@approver_required
+def approver_dashboard():
+    """Approver dashboard - pending approvals queue"""
+    user = session.get('user')
+    if not user:
+        return redirect(url_for('login'))
+    
+    try:
+        requests = execute_procedure('jit.sp_Request_ListPendingForApprover', {'ApproverUserId': user['UserId']})
+    except Exception as e:
+        requests = []
+        flash(f'Error loading approvals: {str(e)}', 'error')
+    
+    return render_template('approver/dashboard.html', user=user, requests=requests or [])
+
+@app.route('/approver/request/<int:request_id>')
+@approver_required
+def approver_request_detail(request_id):
+    """Review request details"""
+    user = session.get('user')
+    if not user:
+        return redirect(url_for('login'))
+    
+    try:
+        # Get request details
+        requests = execute_query(
+            "SELECT * FROM jit.Requests WHERE RequestId = ?",
+            [request_id]
+        )
+        request_data = requests[0] if requests else None
+        
+        if not request_data:
+            flash('Request not found', 'error')
+            return redirect(url_for('approver_dashboard'))
+        
+        return render_template('approver/approve.html', user=user, request_data=request_data)
+    except Exception as e:
+        flash(f'Error loading request: {str(e)}', 'error')
+        return redirect(url_for('approver_dashboard'))
+
+@app.route('/approver/approve/<int:request_id>', methods=['POST'])
+@approver_required
+def approver_approve(request_id):
+    """Approve request"""
+    user = session.get('user')
+    if not user:
+        return redirect(url_for('login'))
+    
+    try:
+        comment = request.form.get('comment', '')
+        execute_procedure('jit.sp_Request_Approve', {
+            'RequestId': request_id,
+            'ApproverUserId': user['UserId'],
+            'DecisionComment': comment
+        })
+        flash('Request approved successfully', 'success')
+    except Exception as e:
+        flash(f'Error approving request: {str(e)}', 'error')
+    
+    return redirect(url_for('approver_dashboard'))
+
+@app.route('/approver/deny/<int:request_id>', methods=['POST'])
+@approver_required
+def approver_deny(request_id):
+    """Deny request"""
+    user = session.get('user')
+    if not user:
+        return redirect(url_for('login'))
+    
+    try:
+        comment = request.form.get('comment', '')
+        execute_procedure('jit.sp_Request_Deny', {
+            'RequestId': request_id,
+            'ApproverUserId': user['UserId'],
+            'DecisionComment': comment
+        })
+        flash('Request denied', 'info')
+    except Exception as e:
+        flash(f'Error denying request: {str(e)}', 'error')
+    
+    return redirect(url_for('approver_dashboard'))
+
+# ==================== ADMIN ROUTES ====================
+
+@app.route('/admin/dashboard')
+@admin_required
+def admin_dashboard():
+    """Admin dashboard"""
+    user = session.get('user')
+    if not user:
+        return redirect(url_for('login'))
+    
+    return render_template('admin/dashboard.html', user=user)
+
+@app.route('/admin/roles')
+@admin_required
+def admin_roles():
+    """Manage role catalog"""
+    user = session.get('user')
+    if not user:
+        return redirect(url_for('login'))
+    
+    try:
+        roles = execute_query("SELECT * FROM jit.Roles ORDER BY RoleName")
+    except Exception as e:
+        roles = []
+        flash(f'Error loading roles: {str(e)}', 'error')
+    
+    return render_template('admin/roles.html', user=user, roles=roles or [])
+
+@app.route('/admin/teams')
+@admin_required
+def admin_teams():
+    """Manage teams"""
+    user = session.get('user')
+    if not user:
+        return redirect(url_for('login'))
+    
+    try:
+        teams = execute_query("SELECT * FROM jit.Teams WHERE IsActive = 1 ORDER BY TeamName")
+    except Exception as e:
+        teams = []
+        flash(f'Error loading teams: {str(e)}', 'error')
+    
+    return render_template('admin/teams.html', user=user, teams=teams or [])
+
+@app.route('/admin/eligibility')
+@admin_required
+def admin_eligibility():
+    """Manage eligibility rules"""
+    user = session.get('user')
+    if not user:
+        return redirect(url_for('login'))
+    
+    try:
+        rules = execute_query("""
+            SELECT rer.*, r.RoleName 
+            FROM jit.Role_Eligibility_Rules rer
+            INNER JOIN jit.Roles r ON rer.RoleId = r.RoleId
+            ORDER BY r.RoleName, rer.Priority DESC
+        """)
+    except Exception as e:
+        rules = []
+        flash(f'Error loading eligibility rules: {str(e)}', 'error')
+    
+    return render_template('admin/eligibility.html', user=user, rules=rules or [])
+
+@app.route('/admin/users')
+@admin_required
+def admin_users():
+    """User list (AD sync status)"""
+    user = session.get('user')
+    if not user:
+        return redirect(url_for('login'))
+    
+    try:
+        users = execute_query("SELECT * FROM jit.Users ORDER BY LoginName")
+    except Exception as e:
+        users = []
+        flash(f'Error loading users: {str(e)}', 'error')
+    
+    return render_template('admin/users.html', user=user, users=users or [])
+
+@app.route('/admin/reports')
+@admin_required
+def admin_reports():
+    """Audit reports and drift detection"""
+    user = session.get('user')
+    if not user:
+        return redirect(url_for('login'))
+    
+    try:
+        # Get recent audit logs
+        audit_logs = execute_query("""
+            SELECT TOP 100 * FROM jit.AuditLog 
+            ORDER BY EventUtc DESC
+        """)
+        
+        # Get active grants summary
+        active_grants = execute_query("""
+            SELECT COUNT(*) as Count FROM jit.Grants WHERE Status = 'Active'
+        """)
+    except Exception as e:
+        audit_logs = []
+        active_grants = [{'Count': 0}]
+        flash(f'Error loading reports: {str(e)}', 'error')
+    
+    return render_template('admin/reports.html', 
+                         user=user, 
+                         audit_logs=audit_logs or [],
+                         active_grants=active_grants[0] if active_grants else {'Count': 0})
+
+if __name__ == '__main__':
+    app.run(debug=True, host='0.0.0.0', port=5000)
+

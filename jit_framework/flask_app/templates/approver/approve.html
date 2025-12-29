@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}Review Request - JIT Access{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Review Request</h1>
+    <p class="page-subtitle">Review request details and approve or deny</p>
+</div>
+
+<div class="card">
+    <div class="card-header">Request Details</div>
+    <div class="card-body">
+        <table class="table">
+            <tr>
+                <th>Role:</th>
+                <td>{{ request_data.RoleName if 'RoleName' in request_data else 'N/A' }}</td>
+            </tr>
+            <tr>
+                <th>Requester:</th>
+                <td>{{ request_data.UserDeptSnapshot or 'N/A' }}</td>
+            </tr>
+            <tr>
+                <th>Department:</th>
+                <td>{{ request_data.UserDeptSnapshot or 'N/A' }}</td>
+            </tr>
+            <tr>
+                <th>Title:</th>
+                <td>{{ request_data.UserTitleSnapshot or 'N/A' }}</td>
+            </tr>
+            <tr>
+                <th>Duration:</th>
+                <td>{{ request_data.RequestedDurationMinutes }} minutes</td>
+            </tr>
+            <tr>
+                <th>Justification:</th>
+                <td>{{ request_data.Justification or 'N/A' }}</td>
+            </tr>
+            {% if request_data.TicketRef %}
+            <tr>
+                <th>Ticket/Reference:</th>
+                <td>{{ request_data.TicketRef }}</td>
+            </tr>
+            {% endif %}
+            <tr>
+                <th>Requested:</th>
+                <td>{{ request_data.CreatedUtc.strftime('%Y-%m-%d %H:%M') if request_data.CreatedUtc else 'N/A' }}</td>
+            </tr>
+        </table>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">Approve or Deny</div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('approver_approve', request_id=request_data.RequestId) }}" style="margin-bottom: 1rem;">
+            <div class="form-group">
+                <label class="form-label" for="approve_comment">Comment (optional)</label>
+                <textarea class="form-control" id="approve_comment" name="comment" rows="3"></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Approve</button>
+        </form>
+
+        <form method="POST" action="{{ url_for('approver_deny', request_id=request_data.RequestId) }}">
+            <div class="form-group">
+                <label class="form-label" for="deny_comment">Denial Reason (optional)</label>
+                <textarea class="form-control" id="deny_comment" name="comment" rows="3"></textarea>
+            </div>
+            <button type="submit" class="btn btn-danger">Deny</button>
+        </form>
+    </div>
+</div>
+
+<div class="mt-2">
+    <a href="{{ url_for('approver_dashboard') }}" class="btn btn-secondary">Back to Approvals</a>
+</div>
+{% endblock %}
+

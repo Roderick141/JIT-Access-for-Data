@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Request History - JIT Access{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Request History</h1>
+    <p class="page-subtitle">View all your access requests</p>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        {% if requests %}
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Role</th>
+                    <th>Requested</th>
+                    <th>Duration</th>
+                    <th>Status</th>
+                    <th>Justification</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for req in requests %}
+                <tr>
+                    <td>{{ req.RoleName or 'N/A' }}</td>
+                    <td>{{ req.CreatedUtc.strftime('%Y-%m-%d %H:%M') if req.CreatedUtc else 'N/A' }}</td>
+                    <td>{{ req.RequestedDurationMinutes }} minutes</td>
+                    <td>
+                        {% if req.Status == 'AutoApproved' %}
+                            <span class="badge badge-info status-autoapproved">Auto-Approved</span>
+                        {% elif req.Status == 'Pending' %}
+                            <span class="badge badge-warning status-pending">Pending</span>
+                        {% elif req.Status == 'Approved' %}
+                            <span class="badge badge-success status-approved">Approved</span>
+                        {% elif req.Status == 'Denied' %}
+                            <span class="badge badge-danger status-denied">Denied</span>
+                        {% elif req.Status == 'Cancelled' %}
+                            <span class="badge badge-secondary">Cancelled</span>
+                        {% else %}
+                            <span class="badge badge-secondary">{{ req.Status }}</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ req.Justification or 'N/A' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <p>No requests found</p>
+            <a href="{{ url_for('user_request') }}" class="btn btn-primary mt-2">Make a Request</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="mt-2">
+    <a href="{{ url_for('user_dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
+</div>
+{% endblock %}
+

@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block title %}Login - JIT Access{% endblock %}
+
+{% block content %}
+<div style="max-width: 400px; margin: 5rem auto; text-align: center;">
+    <div class="card">
+        <div class="card-header">JIT Access Framework</div>
+        <div class="card-body">
+            <p class="mb-2">Windows Authentication Required</p>
+            <p class="text-muted mb-3">This application uses Windows Authentication</p>
+            <a href="{{ url_for('index') }}" class="btn btn-primary">Continue</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

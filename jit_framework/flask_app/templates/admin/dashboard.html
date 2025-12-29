@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard - JIT Access{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Admin Dashboard</h1>
+    <p class="page-subtitle">Manage the JIT Access Framework</p>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+    <div class="card">
+        <div class="card-header">Roles</div>
+        <div class="card-body">
+            <a href="{{ url_for('admin_roles') }}" class="btn btn-primary">Manage Roles</a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">Teams</div>
+        <div class="card-body">
+            <a href="{{ url_for('admin_teams') }}" class="btn btn-primary">Manage Teams</a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">Eligibility</div>
+        <div class="card-body">
+            <a href="{{ url_for('admin_eligibility') }}" class="btn btn-primary">Manage Eligibility Rules</a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">Users</div>
+        <div class="card-body">
+            <a href="{{ url_for('admin_users') }}" class="btn btn-primary">View Users</a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">Reports</div>
+        <div class="card-body">
+            <a href="{{ url_for('admin_reports') }}" class="btn btn-primary">View Reports</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

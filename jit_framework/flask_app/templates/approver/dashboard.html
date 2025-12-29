@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}Approvals - JIT Access{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Pending Approvals</h1>
+    <p class="page-subtitle">Review and approve access requests</p>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        {% if requests %}
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Requester</th>
+                    <th>Department</th>
+                    <th>Role</th>
+                    <th>Duration</th>
+                    <th>Justification</th>
+                    <th>Requested</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for req in requests %}
+                <tr>
+                    <td>{{ req.RequesterName or 'N/A' }}</td>
+                    <td>{{ req.RequesterDepartment or req.UserDeptSnapshot or 'N/A' }}</td>
+                    <td>{{ req.RoleName or 'N/A' }}</td>
+                    <td>{{ req.RequestedDurationMinutes }} minutes</td>
+                    <td>{{ req.Justification[:50] + '...' if req.Justification and req.Justification|length > 50 else (req.Justification or 'N/A') }}</td>
+                    <td>{{ req.CreatedUtc.strftime('%Y-%m-%d %H:%M') if req.CreatedUtc else 'N/A' }}</td>
+                    <td>
+                        <div class="d-flex gap-1">
+                            <a href="{{ url_for('approver_request_detail', request_id=req.RequestId) }}" class="btn btn-primary">Review</a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">✓</div>
+            <p>No pending approvals</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+

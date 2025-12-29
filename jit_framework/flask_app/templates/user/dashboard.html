@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - JIT Access{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">My Access Dashboard</h1>
+    <p class="page-subtitle">View your active grants and pending requests</p>
+</div>
+
+<div class="card">
+    <div class="card-header">Active Grants</div>
+    <div class="card-body">
+        {% if grants %}
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Role</th>
+                    <th>Granted</th>
+                    <th>Expires</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for grant in grants %}
+                <tr>
+                    <td>{{ grant.RoleName or 'N/A' }}</td>
+                    <td>{{ grant.ValidFromUtc.strftime('%Y-%m-%d %H:%M') if grant.ValidFromUtc else 'N/A' }}</td>
+                    <td>{{ grant.ValidToUtc.strftime('%Y-%m-%d %H:%M') if grant.ValidToUtc else 'N/A' }}</td>
+                    <td><span class="badge badge-success">{{ grant.Status }}</span></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">🔒</div>
+            <p>No active grants</p>
+            <a href="{{ url_for('user_request') }}" class="btn btn-primary mt-2">Request Access</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">Pending Requests</div>
+    <div class="card-body">
+        {% if requests %}
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Role</th>
+                    <th>Requested</th>
+                    <th>Duration</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for req in requests %}
+                {% if req.Status == 'Pending' %}
+                <tr>
+                    <td>{{ req.RoleName or 'N/A' }}</td>
+                    <td>{{ req.CreatedUtc.strftime('%Y-%m-%d %H:%M') if req.CreatedUtc else 'N/A' }}</td>
+                    <td>{{ req.RequestedDurationMinutes }} minutes</td>
+                    <td>
+                        {% if req.Status == 'AutoApproved' %}
+                            <span class="badge badge-info status-autoapproved">Auto-Approved</span>
+                        {% elif req.Status == 'Pending' %}
+                            <span class="badge badge-warning status-pending">Pending</span>
+                        {% elif req.Status == 'Approved' %}
+                            <span class="badge badge-success status-approved">Approved</span>
+                        {% elif req.Status == 'Denied' %}
+                            <span class="badge badge-danger status-denied">Denied</span>
+                        {% else %}
+                            <span class="badge badge-secondary">{{ req.Status }}</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if req.Status == 'Pending' %}
+                        <a href="{{ url_for('user_cancel', request_id=req.RequestId) }}" 
+                           class="btn btn-danger" 
+                           onclick="return confirm('Are you sure you want to cancel this request?')">Cancel</a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endif %}
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <p>No pending requests</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="d-flex justify-content-between align-items-center mt-3">
+    <a href="{{ url_for('user_request') }}" class="btn btn-primary">Request New Access</a>
+    <a href="{{ url_for('user_history') }}" class="btn btn-secondary">View Full History</a>
+</div>
+{% endblock %}
+

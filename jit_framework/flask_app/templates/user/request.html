@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block title %}Request Access - JIT Access{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Request Access</h1>
+    <p class="page-subtitle">Request access to a role</p>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('user_request') }}">
+            <div class="form-group">
+                <label class="form-label" for="role_id">Role</label>
+                <select class="form-control" id="role_id" name="role_id" required>
+                    <option value="">Select a role...</option>
+                    {% for role in roles %}
+                    <option value="{{ role.RoleId }}">{{ role.RoleName }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="duration_minutes">Duration (minutes)</label>
+                <input type="number" 
+                       class="form-control" 
+                       id="duration_minutes" 
+                       name="duration_minutes" 
+                       min="1" 
+                       max="10080" 
+                       required
+                       placeholder="Enter duration in minutes">
+                <small class="text-muted">Maximum 10080 minutes (7 days)</small>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="justification">Justification</label>
+                <textarea class="form-control" 
+                          id="justification" 
+                          name="justification" 
+                          rows="4" 
+                          required
+                          placeholder="Explain why you need this access..."></textarea>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="ticket_ref">Ticket/Reference (optional)</label>
+                <input type="text" 
+                       class="form-control" 
+                       id="ticket_ref" 
+                       name="ticket_ref"
+                       placeholder="Ticket number or reference">
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">Submit Request</button>
+                <a href="{{ url_for('user_dashboard') }}" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
