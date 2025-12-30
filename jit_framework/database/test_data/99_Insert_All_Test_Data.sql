@@ -37,7 +37,7 @@ DELETE FROM [jit].[Grants];
 DELETE FROM [jit].[Approvals];
 DELETE FROM [jit].[Requests];
 DELETE FROM [jit].[Role_Approvers];
-DELETE FROM [jit].[User_To_Role_Eligibility];
+DELETE FROM [jit].[User_To_Role_Eligibility]; 
 DELETE FROM [jit].[Role_Eligibility_Rules];
 DELETE FROM [jit].[User_Teams];
 DELETE FROM [jit].[Teams];

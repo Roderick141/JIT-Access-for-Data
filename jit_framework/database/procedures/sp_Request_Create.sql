@@ -125,12 +125,15 @@ BEGIN
         IF @AutoApprove = 1
         BEGIN
             DECLARE @GrantId BIGINT;
+            DECLARE @GrantValidFromUtc DATETIME2 = GETUTCDATE();
+            DECLARE @GrantValidToUtc DATETIME2 = DATEADD(MINUTE, @RequestedDurationMinutes, GETUTCDATE());
+            
             EXEC [jit].[sp_Grant_Issue]
                 @RequestId = @RequestId,
                 @UserId = @UserId,
                 @RoleId = @RoleId,
-                @ValidFromUtc = GETUTCDATE(),
-                @ValidToUtc = DATEADD(MINUTE, @RequestedDurationMinutes, GETUTCDATE()),
+                @ValidFromUtc = @GrantValidFromUtc,
+                @ValidToUtc = @GrantValidToUtc,
                 @IssuedByUserId = @UserId,
                 @GrantId = @GrantId OUTPUT;
         END
