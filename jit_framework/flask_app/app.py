@@ -5,7 +5,7 @@ Main application file
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
 from config import Config
 from utils.db import get_db_connection, close_db, execute_procedure, execute_query
-from utils.auth import get_current_user, login_required, admin_required, approver_required
+from utils.auth import get_current_user, login_required, admin_required, approver_required, is_approver, is_admin
 import os
 
 app = Flask(__name__)
@@ -19,6 +19,10 @@ def index():
     """Redirect to dashboard"""
     user = get_current_user()
     if user:
+        # Add role flags to user dict for template use
+        user['IsApprover'] = is_approver(user.get('UserId'))
+        user['IsAdmin'] = is_admin(user.get('UserId'))
+        session['user'] = user
         return redirect(url_for('user_dashboard'))
     return redirect(url_for('login'))
 
@@ -27,6 +31,9 @@ def login():
     """Login page (Windows Auth - auto-redirect if authenticated)"""
     user = get_current_user()
     if user:
+        # Add role flags to user dict for template use
+        user['IsApprover'] = is_approver(user.get('UserId'))
+        user['IsAdmin'] = is_admin(user.get('UserId'))
         session['user'] = user
         return redirect(url_for('user_dashboard'))
     return render_template('login.html')
@@ -40,6 +47,13 @@ def user_dashboard():
     user = session.get('user')
     if not user:
         return redirect(url_for('login'))
+    
+    # Ensure role flags are set
+    if 'IsApprover' not in user:
+        user['IsApprover'] = is_approver(user.get('UserId'))
+    if 'IsAdmin' not in user:
+        user['IsAdmin'] = is_admin(user.get('UserId'))
+    session['user'] = user
     
     try:
         # Get active grants for user

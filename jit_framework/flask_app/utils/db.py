@@ -6,7 +6,7 @@ from flask import current_app, g
 from functools import wraps
 
 def get_db_connection():
-    """Get database connection using Windows Authentication"""
+    """Get database connection using SQL Server Authentication (service account)"""
     if 'db' not in g:
         g.db = pyodbc.connect(current_app.config['DB_CONNECTION_STRING'])
     return g.db

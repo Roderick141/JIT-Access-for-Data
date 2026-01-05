@@ -29,6 +29,7 @@ BEGIN
         JobTitle,
         SeniorityLevel,
         ManagerLoginName,
+        IsAdmin,
         IsActive,
         LastAdSyncUtc,
         CreatedUtc,

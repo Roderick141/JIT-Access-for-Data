@@ -57,12 +57,12 @@ BEGIN
         INSERT INTO [jit].[Users] (
             LoginName, GivenName, Surname, DisplayName, Email,
             Division, Department, JobTitle, SeniorityLevel, ManagerLoginName,
-            LastAdSyncUtc, CreatedBy, UpdatedBy
+            IsAdmin, LastAdSyncUtc, CreatedBy, UpdatedBy
         )
         SELECT 
             s.LoginName, s.GivenName, s.Surname, s.DisplayName, s.Email,
             s.Division, s.Department, s.JobTitle, s.SeniorityLevel, s.ManagerLoginName,
-            @SyncDate, @SyncUser, @SyncUser
+            0, @SyncDate, @SyncUser, @SyncUser
         FROM [jit].[AD_Staging] s
         WHERE NOT EXISTS (SELECT 1 FROM [jit].[Users] u WHERE u.LoginName = s.LoginName);
         

@@ -1,7 +1,7 @@
 -- =============================================
 -- Stored Procedure: jit.sp_User_ResolveCurrentUser
 -- Resolves ORIGINAL_LOGIN() to UserId
--- Creates user record if not exists
+-- User must exist (no auto-creation)
 -- Returns UserId and user metadata
 -- =============================================
 
@@ -20,6 +20,7 @@ CREATE PROCEDURE [jit].[sp_User_ResolveCurrentUser]
     @Division NVARCHAR(255) OUTPUT,
     @JobTitle NVARCHAR(255) OUTPUT,
     @SeniorityLevel INT OUTPUT,
+    @IsAdmin BIT OUTPUT,
     @IsActive BIT OUTPUT
 AS
 BEGIN
@@ -28,7 +29,7 @@ BEGIN
     DECLARE @CurrentLogin NVARCHAR(255) = ORIGINAL_LOGIN();
     DECLARE @CurrentUser NVARCHAR(255) = SUSER_SNAME();
     
-    -- Try to find existing user
+    -- Find existing user (user must exist - no auto-creation)
     SELECT 
         @UserId = UserId,
         @LoginName = LoginName,
@@ -37,39 +38,24 @@ BEGIN
         @Division = Division,
         @JobTitle = JobTitle,
         @SeniorityLevel = SeniorityLevel,
+        @IsAdmin = IsAdmin,
         @IsActive = IsActive
     FROM [jit].[Users]
-    WHERE LoginName = @CurrentLogin;
+    WHERE LoginName = @CurrentLogin
+    AND IsActive = 1;
     
-    -- If user doesn't exist, create a basic record
+    -- If user doesn't exist, return NULL values (user must be created manually or via AD sync)
     IF @UserId IS NULL
     BEGIN
-        INSERT INTO [jit].[Users] (
-            LoginName,
-            DisplayName,
-            CreatedBy,
-            UpdatedBy
-        )
-        VALUES (
-            @CurrentLogin,
-            @CurrentUser,
-            @CurrentUser,
-            @CurrentUser
-        );
-        
-        SET @UserId = SCOPE_IDENTITY();
+        SET @UserId = NULL;
         SET @LoginName = @CurrentLogin;
         SET @DisplayName = @CurrentUser;
         SET @Department = NULL;
         SET @Division = NULL;
         SET @JobTitle = NULL;
         SET @SeniorityLevel = NULL;
-        SET @IsActive = 1;
-        
-        -- Log the creation
-        INSERT INTO [jit].[AuditLog] (EventType, ActorLoginName, TargetUserId, DetailsJson)
-        VALUES ('UserCreated', @CurrentUser, @UserId, 
-            '{"LoginName":"' + @CurrentLogin + '","Source":"AutoCreated"}');
+        SET @IsAdmin = 0;
+        SET @IsActive = 0;
     END
 END
 GO

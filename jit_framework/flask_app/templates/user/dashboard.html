@@ -1,11 +1,22 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard - JIT Access{% endblock %}
+{% block title %}My Access - JIT Access{% endblock %}
 
 {% block content %}
 <div class="page-header">
     <h1 class="page-title">My Access Dashboard</h1>
     <p class="page-subtitle">View your active grants and pending requests</p>
+</div>
+
+<!-- Navigation Menu for User Section -->
+<div class="card" style="margin-bottom: 1.5rem;">
+    <div class="card-body">
+        <div class="d-flex gap-2" style="flex-wrap: wrap;">
+            <a href="{{ url_for('user_dashboard') }}" class="btn {% if request.endpoint == 'user_dashboard' %}btn-primary{% else %}btn-secondary{% endif %}">Dashboard</a>
+            <a href="{{ url_for('user_request') }}" class="btn {% if request.endpoint == 'user_request' %}btn-primary{% else %}btn-secondary{% endif %}">Request Access</a>
+            <a href="{{ url_for('user_history') }}" class="btn {% if request.endpoint == 'user_history' %}btn-primary{% else %}btn-secondary{% endif %}">Request History</a>
+        </div>
+    </div>
 </div>
 
 <div class="card">
@@ -101,4 +112,3 @@
     <a href="{{ url_for('user_history') }}" class="btn btn-secondary">View Full History</a>
 </div>
 {% endblock %}
-

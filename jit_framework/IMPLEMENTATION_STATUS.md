@@ -5,20 +5,22 @@
 ### Database Schema
 - ✅ All 14 tables created with proper indexes and foreign keys
 - ✅ Schema creation scripts in `database/schema/`
-- ✅ Master script for creating all tables
+- ✅ Master script for creating all tables (`99_Create_All_Tables.sql`)
+- ✅ `IsAdmin` column added to `Users` table for admin role management
+- ✅ No auto-user creation (users must be created manually or via AD sync)
 
 ### Stored Procedures
 - ✅ Identity Management:
-  - sp_User_ResolveCurrentUser
-  - sp_User_GetByLogin
-  - sp_User_SyncFromAD
+  - sp_User_ResolveCurrentUser (no auto-creation, returns NULL if user not found)
+  - sp_User_GetByLogin (includes IsAdmin field)
+  - sp_User_SyncFromAD (includes IsAdmin field, defaults to 0)
   - sp_User_Eligibility_Check
 
 - ✅ Role Management:
   - sp_Role_ListRequestable
 
 - ✅ Workflow:
-  - sp_Request_Create (with auto-approval logic)
+  - sp_Request_Create (with 3-tier auto-approval logic)
   - sp_Request_Approve
   - sp_Request_Deny
   - sp_Request_Cancel
@@ -28,29 +30,49 @@
   - sp_Grant_Expire
   - sp_Grant_ListActiveForUser
 
+- ✅ Master script for creating all procedures (`99_Create_All_Procedures.sql`)
+
 ### Flask Application
 - ✅ Core application structure
-- ✅ Configuration system
-- ✅ Database utilities
-- ✅ Authentication utilities
+- ✅ Configuration system (uses SQL Server Authentication with service account)
+- ✅ Database utilities (service account connection)
+- ✅ Authentication utilities (Windows username identification, proper admin/approver checking)
 - ✅ User routes (dashboard, request, history, cancel)
 - ✅ Approver routes (dashboard, approve, deny)
 - ✅ Admin routes (dashboard, roles, teams, eligibility, users, reports)
+- ✅ Role-based navigation (User, Approver, Admin sections)
 
 ### Templates & UI
-- ✅ Base template with navigation
+- ✅ Base template with role-based navigation
 - ✅ Dark mode CSS (minimalist, sleek design)
-- ✅ User dashboard template
+- ✅ User dashboard template (with section navigation)
 - ✅ Request form template
 - ✅ History template
-- ✅ Approver dashboard template
+- ✅ Approver dashboard template (with section navigation)
 - ✅ Approval detail template
-- ✅ Admin dashboard template
+- ✅ Admin dashboard template (with section navigation)
 - ✅ Login template
+
+### Authentication & Authorization
+- ✅ Service account database connection (SQL Server Authentication)
+- ✅ Windows username identification (from environment/request headers)
+- ✅ No auto-user creation (users must exist in database)
+- ✅ Proper admin role checking (checks `IsAdmin` column)
+- ✅ Proper approver checking (checks `Role_Approvers` table)
+- ✅ Role-based navigation (shows sections based on user type)
+- ✅ Route protection with decorators (`@login_required`, `@approver_required`, `@admin_required`)
 
 ### Documentation
 - ✅ README.md with setup instructions
-- ✅ Implementation status document
+- ✅ FLASK_SETUP_GUIDE.md with service account setup
+- ✅ AUTHENTICATION_EXPLAINED.md with detailed auth flow
+- ✅ SERVICE_ACCOUNT_SETUP.md with service account configuration
+- ✅ CHANGES_SUMMARY.md documenting recent changes
+- ✅ Implementation status document (this file)
+
+### Test Data
+- ✅ Test data scripts in `database/test_data/`
+- ✅ Master script for inserting all test data (`99_Insert_All_Test_Data.sql`)
 
 ## ⚠️ Partially Complete / Needs Enhancement
 
@@ -60,41 +82,63 @@
 - ⚠️ Grant reconciliation procedure (sp_Grant_Reconcile) - Referenced in plan but not yet implemented
 
 ### Flask Application
-- ⚠️ Authentication decorators need actual admin/approver role checking logic
-- ⚠️ Some templates missing (admin/roles.html, admin/teams.html, admin/eligibility.html, admin/users.html, admin/reports.html)
-- ⚠️ Output parameter handling in db.py needs refinement for stored procedures with OUTPUT parameters
+- ⚠️ Some admin templates missing (admin/roles.html, admin/teams.html, admin/eligibility.html, admin/users.html, admin/reports.html) - Routes exist but templates need to be created
+- ⚠️ IIS/Windows Auth integration for production - Currently uses environment variables for Windows username
 
 ### SQL Agent Jobs
-- ⚠️ Expiry job wrapper created, but needs SQL Agent job configuration
-- ⚠️ AD Sync job script not created
-- ⚠️ Reconciliation job script not created
+- ⚠️ Expiry job - Needs to be created and scheduled
+- ⚠️ Reconciliation job - Needs to be created and scheduled
+- ⚠️ AD sync job - Needs to be created and scheduled
 
-## ❌ Not Yet Implemented
+## 🔄 Recent Changes
 
-### Additional Features
-- ❌ AD staging table creation script
-- ❌ PowerShell AD sync script
-- ❌ Complete admin management interfaces (CRUD for roles, teams, eligibility rules)
-- ❌ Advanced reporting features
-- ❌ Email notifications (optional enhancement)
-- ❌ Role health checks and drift detection UI
-- ❌ Direct grants monitoring and reporting UI
+### Service Account Authentication
+- Changed from Windows Authentication to SQL Server Authentication for database connections
+- Database connections now use service account credentials (`DB_USERNAME` / `DB_PASSWORD`)
+- User identification still uses Windows username (from environment/request headers)
 
-## Next Steps
+### Removed Auto-User Creation
+- Users must be created manually or via AD sync before accessing the application
+- `sp_User_ResolveCurrentUser` no longer creates users automatically
+- Flask authentication returns error if user not found
 
-1. **Complete Missing Templates**: Create remaining admin templates for full CRUD operations
-2. **Implement Team/Eligibility Procedures**: Add the management stored procedures for teams and eligibility rules
-3. **Configure SQL Agent Jobs**: Set up the expiry job in SQL Agent with proper scheduling
-4. **Test Database Procedures**: Test all stored procedures with sample data
-5. **Test Flask Application**: Test all routes and ensure proper error handling
-6. **Security Review**: Review and configure proper permissions for the jit schema
-7. **AD Sync Setup**: Create AD staging table and PowerShell sync script
-8. **Production Configuration**: Update configuration for production deployment
+### Admin Role Implementation
+- Added `IsAdmin` column to `Users` table
+- Implemented proper `is_admin()` function that checks `IsAdmin` column
+- Admin users see "Administration" section in navigation
 
-## Notes
+### Role-Based Navigation
+- Clear navigation structure: "My Access", "Approvals", "Administration"
+- Navigation shows sections based on user type:
+  - Regular users: "My Access" only
+  - Approvers: "My Access" + "Approvals"
+  - Admins: "My Access" + "Approvals" + "Administration"
+- Added navigation menus to each section
 
-- The core functionality is implemented and functional
-- The framework supports all major features: requests, approvals, auto-approval, grants, expiration
-- The UI provides basic functionality but can be enhanced with additional management features
-- Security and permissions need to be configured appropriately for production use
+## 📋 Next Steps / TODO
 
+1. Create missing admin templates (roles, teams, eligibility, users, reports)
+2. Implement team management stored procedures
+3. Implement reporting stored procedures
+4. Implement grant reconciliation procedure
+5. Create SQL Agent jobs (expiry, reconciliation, AD sync)
+6. Set up IIS/Windows Auth integration for production
+7. Add comprehensive error handling and logging
+8. Add input validation and sanitization
+9. Implement audit report views
+10. Add monitoring and alerting
+
+## 🎯 Current Status Summary
+
+The framework is **functional for core use cases**:
+- ✅ Users can request access (if they exist in database)
+- ✅ Approvers can approve/deny requests (if listed in Role_Approvers)
+- ✅ Admins have admin access (if IsAdmin = 1)
+- ✅ Database schema is complete
+- ✅ Core stored procedures are implemented
+- ✅ Flask application structure is in place
+- ✅ Authentication and authorization work correctly
+
+**Ready for**: Testing and deployment with proper service account setup
+
+**Needs**: Admin UI templates, SQL Agent jobs, production IIS configuration

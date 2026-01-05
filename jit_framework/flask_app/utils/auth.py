@@ -1,41 +1,120 @@
 """
 Authentication utilities for JIT Access Framework
-Uses Windows Authentication (integrated security)
+Uses Windows Authentication for user identification, SQL Auth for database connection
 """
 import os
-from flask import session, request, redirect, url_for
+import pyodbc
+from flask import session, request, redirect, url_for, g
 from functools import wraps
-from .db import execute_procedure
+from .db import get_db_connection, execute_query
+
+def get_windows_username():
+    """
+    Get the current Windows username
+    In production with IIS/Windows Auth, this would come from request headers
+    For development, uses environment variables
+    """
+    # Try to get from environment (development)
+    windows_user = os.environ.get('USERNAME') or os.environ.get('USER') or None
+    
+    # In production, you might get this from request headers if using IIS with Windows Auth:
+    # windows_user = request.headers.get('REMOTE_USER') or request.headers.get('AUTH_USER')
+    
+    return windows_user
 
 def get_current_user():
     """
     Get current user information from database
+    User must exist in jit.Users table (no auto-creation)
     Returns user dictionary or None if not found
     """
     try:
-        result = execute_procedure('jit.sp_User_ResolveCurrentUser', fetch=False)
+        windows_username = get_windows_username()
+        if not windows_username:
+            return None
         
-        # For output parameters, we need to handle differently
-        # This is a simplified version - in production, use proper output parameter handling
-        conn = request.environ.get('db_connection')
-        if conn:
-            cursor = conn.cursor()
-            cursor.execute("EXEC jit.sp_User_ResolveCurrentUser")
-            
-            # Get output parameters or result set
-            # This is simplified - actual implementation depends on procedure design
-            pass
+        conn = get_db_connection()
+        cursor = conn.cursor()
         
-        # Alternative: Query user directly by login
-        login_name = os.environ.get('USERNAME') or os.environ.get('USER') or 'SYSTEM'
-        result = execute_procedure('jit.sp_User_GetByLogin', {'LoginName': login_name})
+        # Try to find user by login name (exact match or domain\username format)
+        # Users need to be created manually or via AD sync
+        cursor.execute("""
+            SELECT UserId, LoginName, GivenName, Surname, DisplayName, 
+                   Email, Division, Department, JobTitle, SeniorityLevel, 
+                   ManagerLoginName, IsAdmin, IsActive
+            FROM jit.Users 
+            WHERE (LoginName = ? OR LoginName LIKE ? OR LoginName = ?)
+            AND IsActive = 1
+        """, windows_username, f'%\\{windows_username}', f'{windows_username}')
         
-        if result and len(result) > 0:
-            return result[0]
+        row = cursor.fetchone()
+        if row:
+            columns = [column[0] for column in cursor.description]
+            user_dict = dict(zip(columns, row))
+            cursor.close()
+            return user_dict
+        
+        cursor.close()
         return None
+        
     except Exception as e:
         print(f"Error getting current user: {e}")
         return None
+
+def is_approver(user_id):
+    """
+    Check if user is an approver for any role
+    Returns True if user is listed in jit.Role_Approvers
+    """
+    if not user_id:
+        return False
+        
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT COUNT(*) 
+            FROM jit.Role_Approvers 
+            WHERE ApproverUserId = ?
+        """, user_id)
+        
+        count = cursor.fetchone()[0]
+        cursor.close()
+        return count > 0
+        
+    except Exception as e:
+        print(f"Error checking approver status: {e}")
+        return False
+
+def is_admin(user_id):
+    """
+    Check if user is an admin
+    Checks IsAdmin column in jit.Users table
+    """
+    if not user_id:
+        return False
+        
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT IsAdmin 
+            FROM jit.Users 
+            WHERE UserId = ? AND IsActive = 1
+        """, user_id)
+        
+        result = cursor.fetchone()
+        cursor.close()
+        
+        if result:
+            return bool(result[0])
+        return False
+        
+    except Exception as e:
+        print(f"Error checking admin status: {e}")
+        return False
 
 def login_required(f):
     """Decorator to require user to be logged in"""
@@ -43,27 +122,45 @@ def login_required(f):
     def decorated_function(*args, **kwargs):
         user = get_current_user()
         if user is None:
+            from flask import flash
+            flash('User not found. Please contact your administrator to create your account.', 'error')
             return redirect(url_for('login'))
         session['user'] = user
         return f(*args, **kwargs)
     return decorated_function
 
-def admin_required(f):
-    """Decorator to require admin access (placeholder - implement actual admin check)"""
-    @wraps(f)
-    @login_required
-    def decorated_function(*args, **kwargs):
-        # TODO: Implement actual admin role check
-        # For now, allow if user exists
-        return f(*args, **kwargs)
-    return decorated_function
-
 def approver_required(f):
-    """Decorator to require approver access (placeholder - implement actual approver check)"""
+    """Decorator to require approver access"""
     @wraps(f)
     @login_required
     def decorated_function(*args, **kwargs):
-        # TODO: Implement actual approver role check
+        user = session.get('user')
+        if not user:
+            return redirect(url_for('login'))
+        
+        # Check if user is an approver
+        if not is_approver(user.get('UserId')):
+            from flask import flash
+            flash('You do not have permission to access this page. Approver access required.', 'error')
+            return redirect(url_for('user_dashboard'))
+        
         return f(*args, **kwargs)
     return decorated_function
 
+def admin_required(f):
+    """Decorator to require admin access"""
+    @wraps(f)
+    @login_required
+    def decorated_function(*args, **kwargs):
+        user = session.get('user')
+        if not user:
+            return redirect(url_for('login'))
+        
+        # Check if user is an admin
+        if not is_admin(user.get('UserId')):
+            from flask import flash
+            flash('You do not have permission to access this page. Administrator access required.', 'error')
+            return redirect(url_for('user_dashboard'))
+        
+        return f(*args, **kwargs)
+    return decorated_function

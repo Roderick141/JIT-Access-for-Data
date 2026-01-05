@@ -22,6 +22,7 @@ CREATE TABLE [jit].[Users](
     [JobTitle] [nvarchar](255) NULL,
     [SeniorityLevel] [int] NULL,
     [ManagerLoginName] [nvarchar](255) NULL,
+    [IsAdmin] [bit] NOT NULL CONSTRAINT [DF_Users_IsAdmin] DEFAULT (0),
     [IsActive] [bit] NOT NULL CONSTRAINT [DF_Users_IsActive] DEFAULT (1),
     [LastAdSyncUtc] [datetime2](7) NULL,
     [CreatedUtc] [datetime2](7) NOT NULL CONSTRAINT [DF_Users_CreatedUtc] DEFAULT (GETUTCDATE()),
