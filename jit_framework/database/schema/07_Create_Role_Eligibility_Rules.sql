@@ -6,6 +6,12 @@
 USE [DMAP_JIT_Permissions]
 GO
 
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
 IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[jit].[Role_Eligibility_Rules]') AND type in (N'U'))
     DROP TABLE [jit].[Role_Eligibility_Rules]
 GO

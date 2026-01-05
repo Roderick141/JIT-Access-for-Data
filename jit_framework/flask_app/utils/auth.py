@@ -30,14 +30,22 @@ def get_current_user():
     """
     try:
         windows_username = get_windows_username()
-        if not windows_username:
+        
+        # Validate that we have a string username
+        if not windows_username or not isinstance(windows_username, str) or not windows_username.strip():
             return None
+        
+        # Ensure it's a string and strip whitespace
+        windows_username = str(windows_username).strip()
         
         conn = get_db_connection()
         cursor = conn.cursor()
         
         # Try to find user by login name (exact match or domain\username format)
         # Users need to be created manually or via AD sync
+        # Try multiple patterns: exact match, domain\username, just username
+        search_pattern = f'%\\{windows_username}'
+        
         cursor.execute("""
             SELECT UserId, LoginName, GivenName, Surname, DisplayName, 
                    Email, Division, Department, JobTitle, SeniorityLevel, 
@@ -45,7 +53,7 @@ def get_current_user():
             FROM jit.Users 
             WHERE (LoginName = ? OR LoginName LIKE ? OR LoginName = ?)
             AND IsActive = 1
-        """, windows_username, f'%\\{windows_username}', f'{windows_username}')
+        """, windows_username, search_pattern, windows_username)
         
         row = cursor.fetchone()
         if row:
@@ -59,6 +67,8 @@ def get_current_user():
         
     except Exception as e:
         print(f"Error getting current user: {e}")
+        import traceback
+        traceback.print_exc()
         return None
 
 def is_approver(user_id):

@@ -8,6 +8,12 @@
 USE [DMAP_JIT_Permissions]
 GO
 
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
 PRINT 'Inserting test requests...'
 
 DECLARE @UserId1 INT, @UserId2 INT, @UserId3 INT;

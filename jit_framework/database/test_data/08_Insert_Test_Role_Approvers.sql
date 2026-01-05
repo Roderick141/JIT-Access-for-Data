@@ -7,6 +7,12 @@
 USE [DMAP_JIT_Permissions]
 GO
 
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
 PRINT 'Setting up role approvers...'
 
 -- Set approvers for 'Advanced Analytics' (requires approval for junior users)

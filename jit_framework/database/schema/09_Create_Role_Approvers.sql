@@ -6,13 +6,19 @@
 USE [DMAP_JIT_Permissions]
 GO
 
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
 IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[jit].[Role_Approvers]') AND type in (N'U'))
     DROP TABLE [jit].[Role_Approvers]
 GO
 
 CREATE TABLE [jit].[Role_Approvers](
     [RoleId] [int] NOT NULL,
-    [ApproverUserId] [int] NULL,
+    [ApproverUserId] [int] NOT NULL,
     [ApproverLoginName] [nvarchar](255) NULL,
     [ApproverType] [nvarchar](50) NOT NULL,
     [Priority] [int] NOT NULL,

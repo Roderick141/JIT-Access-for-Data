@@ -7,6 +7,12 @@
 USE [DMAP_JIT_Permissions]
 GO
 
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
 PRINT 'Mapping business roles to DB roles...'
 
 -- Map 'Read-Only Reports' to reporting reader role

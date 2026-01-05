@@ -88,6 +88,12 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON SCHEMA::jit TO [JIT_ServiceAccount];
 2. **Windows Username Identification**: Flask gets Windows username from:
    - Environment variables (`USERNAME` or `USER`) in development
    - Request headers (`REMOTE_USER` or `AUTH_USER`) in production with IIS/Windows Auth
+   
+   **Testing Different Users in Development:**
+   - Set the `USERNAME` environment variable before running Flask
+   - Example (PowerShell): `$env:USERNAME = "DOMAIN\john.smith"`
+   - Example (CMD): `set USERNAME=DOMAIN\john.smith`
+   - See `DEVELOPMENT_TESTING_GUIDE.md` for detailed testing instructions
 3. **Database Lookup**: Flask uses service account to query `jit.Users` table by `LoginName`
 4. **User Validation**: User must exist in `jit.Users` table (no auto-creation)
 5. **Session Storage**: User information is stored in Flask session with role flags
@@ -171,6 +177,50 @@ The navigation menu in `base.html` shows different links based on user type:
 - **Admins**: See "My Access" + "Approvals" + "Administration" links
 
 The role flags (`IsApprover`, `IsAdmin`) are set in the Flask session and checked by templates.
+
+## 5.5. Testing Database Connection
+
+Before running the Flask application, you can test your database connection configuration:
+
+```bash
+cd flask_app
+python test_db_connection.py
+```
+
+This script will:
+- Validate your configuration settings
+- Test the database connection
+- Check if the `jit` schema and tables exist
+- Verify database permissions
+- Provide helpful error messages if something is wrong
+
+**Example output (successful):**
+```
+============================================================
+Database Connection Test
+============================================================
+
+Configuration:
+  Server: localhost
+  Database: DMAP_JIT_Permissions
+  Driver: {ODBC Driver 17 for SQL Server}
+  Username: JIT_ServiceAccount
+  Password: ****************
+
+Validating configuration...
+  ✅ DB_SERVER: localhost
+  ✅ DB_NAME: DMAP_JIT_Permissions
+  ✅ DB_DRIVER: {ODBC Driver 17 for SQL Server}
+  ✅ DB_USERNAME: JIT_ServiceAccount
+  ✅ DB_PASSWORD: ****************
+
+Testing database connection...
+  ✅ Successfully connected to database!
+  ✅ Query executed successfully
+  ✅ jit schema exists
+  ✅ jit.Users table exists
+  ✅ SELECT permission on jit.Users: OK
+```
 
 ## 6. Troubleshooting
 

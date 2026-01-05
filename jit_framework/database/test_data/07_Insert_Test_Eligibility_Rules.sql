@@ -7,6 +7,12 @@
 USE [DMAP_JIT_Permissions]
 GO
 
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
 PRINT 'Inserting eligibility rules...'
 
 -- Rule 1: All users can request 'Read-Only Reports' (pre-approved role)

@@ -8,7 +8,15 @@ from functools import wraps
 def get_db_connection():
     """Get database connection using SQL Server Authentication (service account)"""
     if 'db' not in g:
-        g.db = pyodbc.connect(current_app.config['DB_CONNECTION_STRING'])
+        # Build connection string from config (can't use property in Flask config)
+        conn_str = (
+            f"DRIVER={current_app.config['DB_DRIVER']};"
+            f"SERVER={current_app.config['DB_SERVER']};"
+            f"DATABASE={current_app.config['DB_NAME']};"
+            f"UID={current_app.config['DB_USERNAME']};"
+            f"PWD={current_app.config['DB_PASSWORD']};"
+        )
+        g.db = pyodbc.connect(conn_str)
     return g.db
 
 def close_db(e=None):

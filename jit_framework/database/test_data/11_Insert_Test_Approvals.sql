@@ -7,6 +7,12 @@
 USE [DMAP_JIT_Permissions]
 GO
 
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
 PRINT 'Inserting test approvals...'
 
 DECLARE @RequestId1 BIGINT, @RequestId2 BIGINT;

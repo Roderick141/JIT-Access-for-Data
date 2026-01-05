@@ -9,6 +9,12 @@
 USE [DMAP_JIT_Permissions]
 GO
 
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
 PRINT 'Inserting test DB roles...'
 PRINT 'WARNING: Ensure these database roles exist in your database, or create them first!'
 

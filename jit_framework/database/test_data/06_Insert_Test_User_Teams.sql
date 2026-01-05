@@ -7,6 +7,12 @@
 USE [DMAP_JIT_Permissions]
 GO
 
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
 PRINT 'Assigning users to teams...'
 
 -- Assign users to Data Engineering Team

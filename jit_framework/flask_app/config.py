@@ -2,9 +2,16 @@
 Configuration for JIT Access Framework Flask Application
 """
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 
-load_dotenv()
+# Try to load from settings.env first (if it exists), otherwise try .env
+env_file = Path(__file__).parent / 'settings.env'
+if env_file.exists():
+    load_dotenv(dotenv_path=env_file)
+else:
+    # Fall back to .env if settings.env doesn't exist
+    load_dotenv()
 
 class Config:
     """Base configuration"""
