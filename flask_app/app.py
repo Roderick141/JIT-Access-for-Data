@@ -7,9 +7,13 @@ from config import Config
 from utils.db import get_db_connection, close_db, execute_procedure, execute_query
 from utils.auth import get_current_user, login_required, admin_required, approver_required, is_approver, is_admin
 import os
+import mimetypes
 
 app = Flask(__name__)
 app.config.from_object(Config)
+
+# Ensure CSS files are served with correct MIME type for Edge compatibility
+mimetypes.add_type('text/css', '.css')
 
 # Template filter to convert minutes to days
 @app.template_filter('minutes_to_days')
@@ -21,6 +25,29 @@ def minutes_to_days_filter(minutes):
 
 # Register close_db to be called when request ends
 app.teardown_appcontext(close_db)
+
+# Add response headers for Edge compatibility
+@app.after_request
+def add_edge_headers(response):
+    """Add headers to help Edge properly load CSS and other static files"""
+    # Check if this is a CSS file request
+    is_css_file = request.path.endswith('.css') or '/css/' in request.path
+    
+    # Ensure CSS files have correct Content-Type with charset
+    if is_css_file:
+        response.headers['Content-Type'] = 'text/css; charset=utf-8'
+    
+    # Add headers to prevent MIME type sniffing (Edge security feature)
+    # This helps Edge trust the Content-Type header
+    if 'X-Content-Type-Options' not in response.headers:
+        response.headers['X-Content-Type-Options'] = 'nosniff'
+    
+    # Ensure proper cache headers for static files
+    if '/static/' in request.path:
+        if 'Cache-Control' not in response.headers:
+            response.headers['Cache-Control'] = 'public, max-age=3600'
+    
+    return response
 
 @app.route('/')
 def index():
