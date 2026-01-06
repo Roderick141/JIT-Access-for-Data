@@ -8,7 +8,7 @@ if defined _OLD_CODEPAGE (
     "%SystemRoot%\System32\chcp.com" 65001 > nul
 )
 
-set VIRTUAL_ENV=C:\Users\Roderick\Documents\Projects\JIT-Access-for-Data
+set VIRTUAL_ENV=C:\Repos\JIT-Access-for-Data
 
 if not defined PROMPT set PROMPT=$P$G
 
