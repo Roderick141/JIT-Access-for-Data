@@ -11,6 +11,14 @@ import os
 app = Flask(__name__)
 app.config.from_object(Config)
 
+# Template filter to convert minutes to days
+@app.template_filter('minutes_to_days')
+def minutes_to_days_filter(minutes):
+    """Convert minutes to days, rounding to 1 decimal place"""
+    if minutes is None:
+        return 0
+    return round(minutes / 1440, 1)
+
 # Register close_db to be called when request ends
 app.teardown_appcontext(close_db)
 
@@ -81,7 +89,9 @@ def user_request():
     if request.method == 'POST':
         try:
             role_id = int(request.form.get('role_id'))
-            duration_minutes = int(request.form.get('duration_minutes'))
+            duration_days = int(request.form.get('duration_days'))
+            # Convert days to minutes (1 day = 1440 minutes)
+            duration_minutes = duration_days * 1440
             justification = request.form.get('justification', '')
             ticket_ref = request.form.get('ticket_ref', '')
             

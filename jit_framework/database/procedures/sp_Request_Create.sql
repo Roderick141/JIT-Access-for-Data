@@ -16,9 +16,7 @@ CREATE PROCEDURE [jit].[sp_Request_Create]
     @RoleId INT,
     @RequestedDurationMinutes INT,
     @Justification NVARCHAR(MAX),
-    @TicketRef NVARCHAR(255) = NULL,
-    @RequestId BIGINT OUTPUT,
-    @Status NVARCHAR(50) OUTPUT
+    @TicketRef NVARCHAR(255) = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -31,6 +29,8 @@ BEGIN
     DECLARE @UserSeniorityLevel INT;
     DECLARE @UserDept NVARCHAR(255);
     DECLARE @UserTitle NVARCHAR(255);
+    DECLARE @RequestId BIGINT;
+    DECLARE @Status NVARCHAR(50);
     
     BEGIN TRY
         BEGIN TRANSACTION;

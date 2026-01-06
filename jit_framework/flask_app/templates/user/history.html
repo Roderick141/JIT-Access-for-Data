@@ -26,7 +26,7 @@
                 <tr>
                     <td>{{ req.RoleName or 'N/A' }}</td>
                     <td>{{ req.CreatedUtc.strftime('%Y-%m-%d %H:%M') if req.CreatedUtc else 'N/A' }}</td>
-                    <td>{{ req.RequestedDurationMinutes }} minutes</td>
+                    <td>{% set days = req.RequestedDurationMinutes | minutes_to_days %}{{ days }} day{% if days != 1 %}s{% endif %}</td>
                     <td>
                         {% if req.Status == 'AutoApproved' %}
                             <span class="badge badge-info status-autoapproved">Auto-Approved</span>
