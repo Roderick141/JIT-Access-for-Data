@@ -11,6 +11,11 @@ IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[jit].[sp_Req
     DROP PROCEDURE [jit].[sp_Request_Cancel]
 GO
 
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
 CREATE PROCEDURE [jit].[sp_Request_Cancel]
     @RequestId BIGINT,
     @UserId INT

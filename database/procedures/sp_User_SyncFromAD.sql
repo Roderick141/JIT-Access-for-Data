@@ -15,6 +15,11 @@ IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[jit].[sp_Use
     DROP PROCEDURE [jit].[sp_User_SyncFromAD]
 GO
 
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
 CREATE PROCEDURE [jit].[sp_User_SyncFromAD]
     @SyncDate DATETIME2 = NULL
 AS

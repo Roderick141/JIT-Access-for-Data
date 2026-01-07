@@ -25,7 +25,7 @@
                 <tr>
                     <th>Requester</th>
                     <th>Department</th>
-                    <th>Role</th>
+                    <th>Roles</th>
                     <th>Duration</th>
                     <th>Justification</th>
                     <th>Requested</th>
@@ -37,7 +37,13 @@
                 <tr>
                     <td>{{ req.RequesterName or 'N/A' }}</td>
                     <td>{{ req.RequesterDepartment or req.UserDeptSnapshot or 'N/A' }}</td>
-                    <td>{{ req.RoleName or 'N/A' }}</td>
+                    <td>
+                        {% if req.RoleCount and req.RoleCount > 1 %}
+                            <strong>{{ req.RoleCount }} roles:</strong> {{ req.RoleNames or 'N/A' }}
+                        {% else %}
+                            {{ req.RoleNames or req.RoleName or 'N/A' }}
+                        {% endif %}
+                    </td>
                     <td>{% set days = req.RequestedDurationMinutes | minutes_to_days %}{{ days }} day{% if days != 1 %}s{% endif %}</td>
                     <td>{{ req.Justification[:50] + '...' if req.Justification and req.Justification|length > 50 else (req.Justification or 'N/A') }}</td>
                     <td>{{ req.CreatedUtc.strftime('%Y-%m-%d %H:%M') if req.CreatedUtc else 'N/A' }}</td>

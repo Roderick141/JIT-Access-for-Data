@@ -25,10 +25,10 @@ PRINT ''
 :r "06_Create_User_Teams.sql"
 :r "07_Create_Role_Eligibility_Rules.sql"
 :r "08_Create_User_To_Role_Eligibility.sql"
-:r "09_Create_Role_Approvers.sql"
 
 -- Workflow tables
 :r "10_Create_Requests.sql"
+:r "15_Create_Request_Roles.sql"
 :r "11_Create_Approvals.sql"
 :r "12_Create_Grants.sql"
 :r "13_Create_Grant_DBRole_Assignments.sql"

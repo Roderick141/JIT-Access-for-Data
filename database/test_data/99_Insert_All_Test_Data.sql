@@ -35,8 +35,8 @@ DELETE FROM [jit].[AuditLog];
 DELETE FROM [jit].[Grant_DBRole_Assignments];
 DELETE FROM [jit].[Grants];
 DELETE FROM [jit].[Approvals];
+DELETE FROM [jit].[Request_Roles];
 DELETE FROM [jit].[Requests];
-DELETE FROM [jit].[Role_Approvers];
 DELETE FROM [jit].[User_To_Role_Eligibility]; 
 DELETE FROM [jit].[Role_Eligibility_Rules];
 DELETE FROM [jit].[User_Teams];
@@ -83,12 +83,12 @@ PRINT 'Step 7: Inserting eligibility rules...'
 :r "07_Insert_Test_Eligibility_Rules.sql"
 
 PRINT ''
-PRINT 'Step 8: Setting up role approvers...'
-:r "08_Insert_Test_Role_Approvers.sql"
+PRINT 'Step 8: Inserting test requests...'
+:r "09_Insert_Test_Requests.sql"
 
 PRINT ''
-PRINT 'Step 9: Inserting test requests...'
-:r "09_Insert_Test_Requests.sql"
+PRINT 'Step 9a: Associating roles with requests...'
+:r "09a_Insert_Test_Request_Roles.sql"
 
 PRINT ''
 PRINT 'Step 10: Inserting test grants...'
@@ -113,9 +113,11 @@ PRINT ''
 PRINT 'Test scenarios available:'
 PRINT '  1. Auto-approved requests (pre-approved roles)'
 PRINT '  2. Pending requests (requiring approval)'
-PRINT '  3. Seniority-based auto-approval (test with senior users)'
-PRINT '  4. Eligibility rules (department, division, team-based)'
-PRINT '  5. Expired grants (for testing expiry job)'
+PRINT '  3. Multi-role requests (2-3 roles per request)'
+PRINT '  4. Single-role requests (legacy compatibility)'
+PRINT '  5. Seniority-based auto-approval (test with senior users)'
+PRINT '  6. Eligibility rules (department, division, team-based)'
+PRINT '  7. Expired grants (for testing expiry job)'
 PRINT ''
 PRINT 'Test users:'
 PRINT '  - DOMAIN\john.smith (Senior - Level 4)'

@@ -31,10 +31,10 @@ VALUES
     
     -- Full approval required
     ('Full Database Access', 'Full read/write access to database', 1440, 1, '^TICKET-[0-9]+$', 1, 1, NULL, 1, 'SYSTEM', 'SYSTEM'),
-    ('Data Administrator', 'Administrative access to database objects', 720, 1, '^TICKET-[0-9]+$', 1, 1, NULL, 1, 'SYSTEM', 'SYSTEM'),
+    ('Data Administrator', 'Administrative access to database objects', 1440, 1, '^TICKET-[0-9]+$', 1, 1, NULL, 1, 'SYSTEM', 'SYSTEM'),
     
     -- Quick access role (short duration, pre-approved)
-    ('Temporary Query Access', 'Short-term access for ad-hoc queries', 240, 0, NULL, 1, 0, NULL, 1, 'SYSTEM', 'SYSTEM');
+    ('Temporary Query Access', 'Short-term access for ad-hoc queries', 1440, 0, NULL, 1, 0, NULL, 1, 'SYSTEM', 'SYSTEM');
 
 PRINT CAST(@@ROWCOUNT AS VARCHAR(10)) + ' roles inserted'
 

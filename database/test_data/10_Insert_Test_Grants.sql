@@ -32,28 +32,63 @@ SELECT @RoleId2 = RoleId FROM [jit].[Roles] WHERE RoleName = 'Data Warehouse Rea
 SELECT @RoleId3 = RoleId FROM [jit].[Roles] WHERE RoleName = 'Advanced Analytics';
 
 -- Get request IDs (from previously inserted requests)
-SELECT @RequestId1 = RequestId FROM [jit].[Requests] WHERE Status = 'AutoApproved' AND UserId = @UserId1;
-SELECT @RequestId2 = RequestId FROM [jit].[Requests] WHERE Status = 'Approved' AND UserId = @UserId2;
+-- Note: These lookups work because we know the single-role requests from the test data
+-- Request 1: Auto-approved for mike.wilson (UserId1)
+SELECT TOP 1 @RequestId1 = RequestId 
+FROM [jit].[Requests] 
+WHERE Status = 'AutoApproved' 
+  AND UserId = @UserId1
+  AND RequestedDurationMinutes = 10080
+ORDER BY CreatedUtc DESC;
 
--- Grant 1: Active grant (from auto-approved request)
-INSERT INTO [jit].[Grants] (
-    RequestId, UserId, RoleId, ValidFromUtc, ValidToUtc,
-    IssuedByUserId, Status
-)
-VALUES (
-    @RequestId1, @UserId1, @RoleId1, GETUTCDATE(), DATEADD(DAY, 7, GETUTCDATE()),
-    @UserId1, 'Active'
-);
+-- Request 2: Approved for emily.brown (UserId2 in grants script variable, but UserId3 in requests)
+-- Note: emily.brown is @UserId2 in this script
+SELECT TOP 1 @RequestId2 = RequestId 
+FROM [jit].[Requests] 
+WHERE Status = 'Approved' 
+  AND UserId = @UserId2
+  AND RequestedDurationMinutes = 2880
+ORDER BY CreatedUtc DESC;
 
--- Grant 2: Active grant (from approved request)
-INSERT INTO [jit].[Grants] (
-    RequestId, UserId, RoleId, ValidFromUtc, ValidToUtc,
-    IssuedByUserId, Status
-)
-VALUES (
-    @RequestId2, @UserId2, @RoleId2, GETUTCDATE(), DATEADD(DAY, 2, GETUTCDATE()),
-    @IssuedByUserId, 'Active'
-);
+-- Grant 1: Active grant (from auto-approved request - single role)
+-- Get the role from Request_Roles for this request
+IF @RequestId1 IS NOT NULL
+BEGIN
+    DECLARE @Grant1RoleId INT;
+    SELECT @Grant1RoleId = RoleId FROM [jit].[Request_Roles] WHERE RequestId = @RequestId1;
+    
+    IF @Grant1RoleId IS NOT NULL
+    BEGIN
+        INSERT INTO [jit].[Grants] (
+            RequestId, UserId, RoleId, ValidFromUtc, ValidToUtc,
+            IssuedByUserId, Status
+        )
+        VALUES (
+            @RequestId1, @UserId1, @Grant1RoleId, GETUTCDATE(), DATEADD(DAY, 7, GETUTCDATE()),
+            @UserId1, 'Active'
+        );
+    END
+END
+
+-- Grant 2: Active grant (from approved request - single role)
+-- Get the role from Request_Roles for this request
+IF @RequestId2 IS NOT NULL
+BEGIN
+    DECLARE @Grant2RoleId INT;
+    SELECT @Grant2RoleId = RoleId FROM [jit].[Request_Roles] WHERE RequestId = @RequestId2;
+    
+    IF @Grant2RoleId IS NOT NULL
+    BEGIN
+        INSERT INTO [jit].[Grants] (
+            RequestId, UserId, RoleId, ValidFromUtc, ValidToUtc,
+            IssuedByUserId, Status
+        )
+        VALUES (
+            @RequestId2, @UserId2, @Grant2RoleId, GETUTCDATE(), DATEADD(DAY, 2, GETUTCDATE()),
+            @IssuedByUserId, 'Active'
+        );
+    END
+END
 
 -- Grant 3: Expired grant (for testing expiry functionality)
 INSERT INTO [jit].[Grants] (
@@ -65,7 +100,14 @@ VALUES (
     @IssuedByUserId, 'Expired'
 );
 
-PRINT CAST(@@ROWCOUNT AS VARCHAR(10)) + ' test grants inserted'
+-- Note: @@ROWCOUNT may not be accurate due to IF blocks, so we count manually
+DECLARE @GrantCount INT = (
+    SELECT COUNT(*) FROM [jit].[Grants] 
+    WHERE RequestId IN (@RequestId1, @RequestId2) 
+       OR (RequestId IS NULL AND UserId = @UserId3)
+);
+
+PRINT CAST(@GrantCount AS VARCHAR(10)) + ' test grants inserted (including pre-existing grants)'
 
 GO
 

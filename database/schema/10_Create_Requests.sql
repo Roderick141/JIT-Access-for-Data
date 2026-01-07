@@ -19,7 +19,6 @@ GO
 CREATE TABLE [jit].[Requests](
     [RequestId] [bigint] IDENTITY(1,1) NOT NULL,
     [UserId] [int] NOT NULL,
-    [RoleId] [int] NOT NULL,
     [RequestedDurationMinutes] [int] NOT NULL,
     [Justification] [nvarchar](max) NULL,
     [TicketRef] [nvarchar](255) NULL,
@@ -38,15 +37,7 @@ ALTER TABLE [jit].[Requests] WITH CHECK ADD CONSTRAINT [FK_Requests_Users]
 
 ALTER TABLE [jit].[Requests] CHECK CONSTRAINT [FK_Requests_Users]
 
-ALTER TABLE [jit].[Requests] WITH CHECK ADD CONSTRAINT [FK_Requests_Roles] 
-    FOREIGN KEY([RoleId]) REFERENCES [jit].[Roles] ([RoleId])
-
-ALTER TABLE [jit].[Requests] CHECK CONSTRAINT [FK_Requests_Roles]
-
 CREATE NONCLUSTERED INDEX [IX_Requests_UserId] ON [jit].[Requests]([UserId] ASC)
-    WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
-
-CREATE NONCLUSTERED INDEX [IX_Requests_RoleId] ON [jit].[Requests]([RoleId] ASC)
     WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 
 CREATE NONCLUSTERED INDEX [IX_Requests_Status] ON [jit].[Requests]([Status] ASC)

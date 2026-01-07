@@ -25,8 +25,8 @@ Run each script in numerical order:
 5. `05_Insert_Test_Teams.sql` - Creates teams
 6. `06_Insert_Test_User_Teams.sql` - Assigns users to teams
 7. `07_Insert_Test_Eligibility_Rules.sql` - Creates eligibility rules
-8. `08_Insert_Test_Role_Approvers.sql` - Sets up approvers
-9. `09_Insert_Test_Requests.sql` - Creates sample requests
+8. `09_Insert_Test_Requests.sql` - Creates sample requests (single and multi-role)
+9. `09a_Insert_Test_Request_Roles.sql` - Associates roles with requests
 10. `10_Insert_Test_Grants.sql` - Creates sample grants
 11. `11_Insert_Test_Approvals.sql` - Creates approval records
 

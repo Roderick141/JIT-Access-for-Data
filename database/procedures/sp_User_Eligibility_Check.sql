@@ -12,6 +12,11 @@ IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[jit].[sp_Use
     DROP PROCEDURE [jit].[sp_User_Eligibility_Check]
 GO
 
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
 CREATE PROCEDURE [jit].[sp_User_Eligibility_Check]
     @UserId INT,
     @RoleId INT,

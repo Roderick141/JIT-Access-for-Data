@@ -60,7 +60,7 @@
         <table class="table">
             <thead>
                 <tr>
-                    <th>Role</th>
+                    <th>Roles</th>
                     <th>Requested</th>
                     <th>Duration</th>
                     <th>Status</th>
@@ -71,7 +71,13 @@
                 {% for req in requests %}
                 {% if req.Status == 'Pending' %}
                 <tr>
-                    <td>{{ req.RoleName or 'N/A' }}</td>
+                    <td>
+                        {% if req.RoleCount and req.RoleCount > 1 %}
+                            <strong>{{ req.RoleCount }} roles:</strong> {{ req.RoleNames or 'N/A' }}
+                        {% else %}
+                            {{ req.RoleNames or req.RoleName or 'N/A' }}
+                        {% endif %}
+                    </td>
                     <td>{{ req.CreatedUtc.strftime('%Y-%m-%d %H:%M') if req.CreatedUtc else 'N/A' }}</td>
                     <td>{% set days = req.RequestedDurationMinutes | minutes_to_days %}{{ days }} day{% if days != 1 %}s{% endif %}</td>
                     <td>

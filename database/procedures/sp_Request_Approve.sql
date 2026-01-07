@@ -1,7 +1,7 @@
 -- =============================================
 -- Stored Procedure: jit.sp_Request_Approve
 -- Processes approval decision
--- Creates grant if approved
+-- Creates grants for ALL roles in the request if approved
 -- =============================================
 
 USE [DMAP_JIT_Permissions]
@@ -9,6 +9,11 @@ GO
 
 IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[jit].[sp_Request_Approve]') AND type in (N'P', N'PC'))
     DROP PROCEDURE [jit].[sp_Request_Approve]
+GO
+
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
 GO
 
 CREATE PROCEDURE [jit].[sp_Request_Approve]
@@ -21,17 +26,31 @@ BEGIN
     
     DECLARE @CurrentUser NVARCHAR(255) = SUSER_SNAME();
     DECLARE @UserId INT;
-    DECLARE @RoleId INT;
     DECLARE @RequestedDurationMinutes INT;
     DECLARE @GrantId BIGINT;
+    DECLARE @CanApprove BIT;
+    DECLARE @ApprovalReason NVARCHAR(100);
+    DECLARE @CurrentRoleId INT;
+    DECLARE @GrantIds NVARCHAR(MAX) = '';
     
     BEGIN TRY
         BEGIN TRANSACTION;
         
+        -- Check if approver has permission to approve this request (checks ALL roles)
+        EXEC [jit].[sp_Approver_CanApproveRequest]
+            @ApproverUserId = @ApproverUserId,
+            @RequestId = @RequestId,
+            @CanApprove = @CanApprove OUTPUT,
+            @ApprovalReason = @ApprovalReason OUTPUT;
+        
+        IF @CanApprove = 0
+        BEGIN
+            THROW 50005, 'Approver does not have permission to approve this request', 1;
+        END
+        
         -- Get request details
         SELECT 
             @UserId = UserId,
-            @RoleId = RoleId,
             @RequestedDurationMinutes = RequestedDurationMinutes
         FROM [jit].[Requests]
         WHERE RequestId = @RequestId AND Status = 'Pending';
@@ -63,23 +82,44 @@ BEGIN
             UpdatedUtc = GETUTCDATE()
         WHERE RequestId = @RequestId;
         
-        -- Issue grant
+        -- Issue grants for ALL roles in the request
         DECLARE @GrantValidFromUtc DATETIME2 = GETUTCDATE();
         DECLARE @GrantValidToUtc DATETIME2 = DATEADD(MINUTE, @RequestedDurationMinutes, GETUTCDATE());
         
-        EXEC [jit].[sp_Grant_Issue]
-            @RequestId = @RequestId,
-            @UserId = @UserId,
-            @RoleId = @RoleId,
-            @ValidFromUtc = @GrantValidFromUtc,
-            @ValidToUtc = @GrantValidToUtc,
-            @IssuedByUserId = @ApproverUserId,
-            @GrantId = @GrantId OUTPUT;
+        DECLARE role_cursor CURSOR FOR 
+            SELECT RoleId 
+            FROM [jit].[Request_Roles] 
+            WHERE RequestId = @RequestId;
+        
+        OPEN role_cursor;
+        FETCH NEXT FROM role_cursor INTO @CurrentRoleId;
+        
+        WHILE @@FETCH_STATUS = 0
+        BEGIN
+            EXEC [jit].[sp_Grant_Issue]
+                @RequestId = @RequestId,
+                @UserId = @UserId,
+                @RoleId = @CurrentRoleId,
+                @ValidFromUtc = @GrantValidFromUtc,
+                @ValidToUtc = @GrantValidToUtc,
+                @IssuedByUserId = @ApproverUserId,
+                @GrantId = @GrantId OUTPUT;
+            
+            -- Collect grant IDs for audit log
+            IF LEN(@GrantIds) > 0
+                SET @GrantIds = @GrantIds + ',';
+            SET @GrantIds = @GrantIds + CAST(@GrantId AS NVARCHAR(10));
+            
+            FETCH NEXT FROM role_cursor INTO @CurrentRoleId;
+        END
+        
+        CLOSE role_cursor;
+        DEALLOCATE role_cursor;
         
         -- Log audit
+        DECLARE @DetailsJson NVARCHAR(MAX) = '{"GrantIds":[' + @GrantIds + ']}';
         INSERT INTO [jit].[AuditLog] (EventType, ActorUserId, ActorLoginName, TargetUserId, RequestId, DetailsJson)
-        VALUES ('Approved', @ApproverUserId, @ApproverLoginName, @UserId, @RequestId,
-            '{"GrantId":' + CAST(@GrantId AS NVARCHAR(10)) + '}');
+        VALUES ('Approved', @ApproverUserId, @ApproverLoginName, @UserId, @RequestId, @DetailsJson);
         
         COMMIT TRANSACTION;
         
@@ -94,4 +134,3 @@ GO
 
 PRINT 'Stored Procedure [jit].[sp_Request_Approve] created successfully'
 GO
-

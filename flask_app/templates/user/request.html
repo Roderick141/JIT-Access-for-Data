@@ -5,24 +5,54 @@
 {% block content %}
 <div class="page-header">
     <h1 class="page-title">Request Access</h1>
-    <p class="page-subtitle">Request access to a role</p>
+    <p class="page-subtitle">Select one or more roles to request access</p>
 </div>
 
 <div class="card">
     <div class="card-body">
-        <form method="POST" action="{{ url_for('user_request') }}">
+        <form method="POST" action="{{ url_for('user_request') }}" id="requestForm">
             <div class="form-group">
-                <label class="form-label" for="role_id">Role</label>
-                <select class="form-control" id="role_id" name="role_id" required>
-                    <option value="">Select a role...</option>
+                <label class="form-label">Select Roles <span class="text-muted">(select at least one)</span></label>
+                
+                {% if roles %}
+                <div id="roles-container" class="roles-checkbox-container">
                     {% for role in roles %}
-                    <option value="{{ role.RoleId }}" 
-                            data-max-duration="{{ role.MaxDurationMinutes }}"
-                            data-requires-ticket="{{ '1' if role.RequiresTicket else '0' }}"
-                            data-ticket-regex="{{ role.TicketRegex or '' }}"
-                            data-role-name="{{ role.RoleName }}">{{ role.RoleName }}</option>
+                    <div class="role-checkbox-item" data-role-id="{{ role.RoleId }}">
+                        <label class="role-checkbox-label">
+                            <input type="checkbox" 
+                                   name="role_id" 
+                                   value="{{ role.RoleId }}"
+                                   class="role-checkbox"
+                                   data-max-duration="{{ role.MaxDurationMinutes }}"
+                                   data-requires-ticket="{{ '1' if role.RequiresTicket else '0' }}"
+                                   data-ticket-regex="{{ role.TicketRegex or '' }}"
+                                   data-role-name="{{ role.RoleName }}">
+                            <div class="role-info">
+                                <div class="role-name">{{ role.RoleName }}</div>
+                                {% if role.Description %}
+                                <div class="role-description">{{ role.Description }}</div>
+                                {% endif %}
+                                <div class="role-meta">
+                                    <span class="role-meta-item">Max Duration: {{ (role.MaxDurationMinutes / 1440) | int }} day{% if (role.MaxDurationMinutes / 1440) | int != 1 %}s{% endif %}</span>
+                                    {% if role.RequiresTicket %}
+                                    <span class="role-meta-item requires-ticket-badge">Requires Ticket</span>
+                                    {% else %}
+                                    <span class="role-meta-item">Ticket: Optional</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </label>
+                    </div>
                     {% endfor %}
-                </select>
+                </div>
+                <div id="selected-count" class="text-muted mt-2" style="display: none;">
+                    <strong><span id="selected-count-number">0</span> role(s) selected</strong>
+                </div>
+                {% else %}
+                <div class="alert alert-info">
+                    No roles available for request. You may already have access to all available roles or are not eligible for any roles.
+                </div>
+                {% endif %}
             </div>
 
             <div class="form-group">
@@ -35,7 +65,7 @@
                        step="1"
                        required
                        placeholder="Enter duration in days">
-                <small class="text-muted" id="duration_help">Select a role to see maximum duration</small>
+                <small class="text-muted" id="duration_help">Select one or more roles to see maximum duration</small>
             </div>
 
             <div class="form-group">
@@ -49,7 +79,7 @@
             </div>
 
             <div class="form-group">
-                <label class="form-label" for="ticket_ref" id="ticket_label">Ticket/Reference (optional)</label>
+                <label class="form-label" for="ticket_ref" id="ticket_label">Ticket/Reference <span id="ticket_required_indicator" class="text-muted">(optional)</span></label>
                 <input type="text" 
                        class="form-control" 
                        id="ticket_ref" 
@@ -65,101 +95,247 @@
         </form>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.roles-checkbox-container {
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 1rem;
+    background: var(--card-bg);
+}
+
+.role-checkbox-item {
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    transition: background-color 0.2s, border-color 0.2s;
+}
+
+.role-checkbox-item:hover {
+    background: var(--hover-bg);
+    border-color: var(--primary-color);
+}
+
+.role-checkbox-item:last-child {
+    margin-bottom: 0;
+}
+
+.role-checkbox-label {
+    display: flex;
+    align-items: flex-start;
+    cursor: pointer;
+    margin: 0;
+}
+
+.role-checkbox {
+    margin-right: 0.75rem;
+    margin-top: 0.25rem;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.role-info {
+    flex: 1;
+}
+
+.role-name {
+    font-weight: 600;
+    font-size: 1rem;
+    margin-bottom: 0.25rem;
+    color: var(--text-primary);
+}
+
+.role-description {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.5rem;
+}
+
+.role-meta {
+    display: flex;
+    gap: 1rem;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    flex-wrap: wrap;
+}
+
+.role-meta-item {
+    display: inline-block;
+}
+
+.requires-ticket-badge {
+    color: var(--warning-color);
+    font-weight: 500;
+}
+
+.role-checkbox:checked + .role-info .role-name {
+    color: var(--primary-color);
+}
+</style>
+{% endblock %}
 
 {% block extra_js %}
 <script>
 (function() {
-    const roleSelect = document.getElementById('role_id');
+    const roleCheckboxes = document.querySelectorAll('.role-checkbox');
     const durationInput = document.getElementById('duration_days');
     const durationHelp = document.getElementById('duration_help');
     const ticketInput = document.getElementById('ticket_ref');
     const ticketLabel = document.getElementById('ticket_label');
     const ticketHelp = document.getElementById('ticket_help');
+    const ticketRequiredIndicator = document.getElementById('ticket_required_indicator');
+    const selectedCount = document.getElementById('selected-count');
+    const selectedCountNumber = document.getElementById('selected-count-number');
+    const requestForm = document.getElementById('requestForm');
     
-    // Convert minutes to days (rounding up to ensure we don't exceed max)
+    // Convert minutes to days (rounding down)
     function minutesToDays(minutes) {
         return Math.floor(minutes / 1440);
     }
     
-    function updateFormForRole() {
-        const selectedOption = roleSelect.options[roleSelect.selectedIndex];
+    // Get all selected roles' data
+    function getSelectedRoles() {
+        const selected = [];
+        roleCheckboxes.forEach(checkbox => {
+            if (checkbox.checked) {
+                selected.push({
+                    roleId: checkbox.value,
+                    maxDurationMinutes: parseInt(checkbox.getAttribute('data-max-duration')) || 10080,
+                    requiresTicket: checkbox.getAttribute('data-requires-ticket') === '1',
+                    ticketRegex: checkbox.getAttribute('data-ticket-regex') || '',
+                    roleName: checkbox.getAttribute('data-role-name') || ''
+                });
+            }
+        });
+        return selected;
+    }
+    
+    // Update form based on selected roles
+    function updateFormForSelectedRoles() {
+        const selected = getSelectedRoles();
+        const selectedCountValue = selected.length;
         
-        if (!selectedOption || !selectedOption.value) {
-            // No role selected - reset to defaults (7 days = 10080 minutes)
-            durationInput.max = '7';
-            durationHelp.textContent = 'Select a role to see maximum duration';
+        // Update selected count
+        if (selectedCountValue > 0) {
+            selectedCount.style.display = 'block';
+            selectedCountNumber.textContent = selectedCountValue;
+        } else {
+            selectedCount.style.display = 'none';
+        }
+        
+        // Update duration field
+        if (selectedCountValue === 0) {
+            durationInput.max = '';
+            durationHelp.textContent = 'Select one or more roles to see maximum duration';
+            durationInput.value = '';
             ticketInput.removeAttribute('required');
-            ticketLabel.textContent = 'Ticket/Reference (optional)';
+            ticketRequiredIndicator.textContent = '(optional)';
+            ticketRequiredIndicator.className = 'text-muted';
             ticketHelp.style.display = 'none';
             ticketInput.value = '';
             return;
         }
         
-        // Get role data from data attributes
-        const maxDurationMinutes = parseInt(selectedOption.getAttribute('data-max-duration')) || 10080;
-        const maxDurationDays = minutesToDays(maxDurationMinutes);
-        const requiresTicket = selectedOption.getAttribute('data-requires-ticket') === '1';
-        const ticketRegex = selectedOption.getAttribute('data-ticket-regex') || '';
-        const roleName = selectedOption.getAttribute('data-role-name') || '';
+        // Calculate minimum max duration across all selected roles
+        const minMaxDuration = Math.min(...selected.map(r => r.maxDurationMinutes));
+        const minMaxDurationDays = minutesToDays(minMaxDuration);
         
-        // Update duration field (in days)
-        durationInput.max = maxDurationDays.toString();
-        if (maxDurationDays === 1) {
-            durationHelp.textContent = 'Maximum 1 day';
+        durationInput.max = minMaxDurationDays.toString();
+        if (minMaxDurationDays === 1) {
+            durationHelp.textContent = 'Maximum 1 day (minimum of selected roles)';
         } else {
-            durationHelp.textContent = 'Maximum ' + maxDurationDays + ' days';
+            durationHelp.textContent = `Maximum ${minMaxDurationDays} days (minimum of selected roles)`;
         }
         
-        // Update ticket field
-        if (requiresTicket) {
+        // Validate current duration value if it exceeds max
+        if (durationInput.value && parseInt(durationInput.value) > minMaxDurationDays) {
+            durationInput.value = minMaxDurationDays;
+        }
+        
+        // Check if ANY role requires ticket
+        const anyRequiresTicket = selected.some(r => r.requiresTicket);
+        
+        if (anyRequiresTicket) {
             ticketInput.setAttribute('required', 'required');
-            ticketLabel.textContent = 'Ticket/Reference (required)';
-            ticketInput.placeholder = 'Ticket number or reference';
+            ticketRequiredIndicator.textContent = '(required)';
+            ticketRequiredIndicator.className = 'text-danger';
+            ticketInput.placeholder = 'Ticket number or reference (required)';
             
-            if (ticketRegex) {
-                ticketHelp.textContent = 'Format: ' + ticketRegex;
+            // Collect all ticket regexes from roles that require tickets
+            const ticketRegexes = selected
+                .filter(r => r.requiresTicket && r.ticketRegex)
+                .map(r => r.ticketRegex);
+            
+            if (ticketRegexes.length > 0) {
+                // Show all formats (might have multiple different formats)
+                const uniqueRegexes = [...new Set(ticketRegexes)];
+                ticketHelp.textContent = 'Format' + (uniqueRegexes.length > 1 ? 's' : '') + ': ' + uniqueRegexes.join(', ');
                 ticketHelp.style.display = 'block';
             } else {
                 ticketHelp.style.display = 'none';
             }
         } else {
             ticketInput.removeAttribute('required');
-            ticketLabel.textContent = 'Ticket/Reference (optional)';
+            ticketRequiredIndicator.textContent = '(optional)';
+            ticketRequiredIndicator.className = 'text-muted';
             ticketInput.placeholder = 'Ticket number or reference';
             ticketHelp.style.display = 'none';
         }
-        
-        // Validate current duration value if it exceeds max
-        if (durationInput.value && parseInt(durationInput.value) > maxDurationDays) {
-            durationInput.value = maxDurationDays;
-        }
     }
     
-    // Add event listener for role selection change
-    roleSelect.addEventListener('change', updateFormForRole);
+    // Add event listeners to all checkboxes
+    roleCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateFormForSelectedRoles);
+    });
     
     // Validate ticket format if regex is provided
     ticketInput.addEventListener('blur', function() {
-        const selectedOption = roleSelect.options[roleSelect.selectedIndex];
-        if (!selectedOption || !selectedOption.value) return;
+        const selected = getSelectedRoles();
+        if (selected.length === 0 || !this.value) {
+            this.setCustomValidity('');
+            return;
+        }
         
-        const ticketRegex = selectedOption.getAttribute('data-ticket-regex');
-        if (ticketRegex && this.value) {
-            const regex = new RegExp(ticketRegex);
-            if (!regex.test(this.value)) {
-                this.setCustomValidity('Ticket format is invalid. Expected format: ' + ticketRegex);
-                this.reportValidity();
-            } else {
-                this.setCustomValidity('');
+        // Check against all selected roles that require tickets and have regex
+        const invalidRoles = [];
+        selected.forEach(role => {
+            if (role.requiresTicket && role.ticketRegex) {
+                try {
+                    const regex = new RegExp(role.ticketRegex);
+                    if (!regex.test(this.value)) {
+                        invalidRoles.push(role.roleName + ' (' + role.ticketRegex + ')');
+                    }
+                } catch (e) {
+                    // Invalid regex, skip validation
+                }
             }
+        });
+        
+        if (invalidRoles.length > 0) {
+            this.setCustomValidity('Ticket format invalid for: ' + invalidRoles.join(', '));
+            this.reportValidity();
         } else {
             this.setCustomValidity('');
         }
     });
     
+    // Form validation - ensure at least one role is selected
+    requestForm.addEventListener('submit', function(e) {
+        const selected = getSelectedRoles();
+        if (selected.length === 0) {
+            e.preventDefault();
+            alert('Please select at least one role');
+            return false;
+        }
+    });
+    
     // Initialize form state on page load
-    updateFormForRole();
+    updateFormForSelectedRoles();
 })();
 </script>
 {% endblock %}
-

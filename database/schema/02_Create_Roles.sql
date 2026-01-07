@@ -42,6 +42,10 @@ CREATE NONCLUSTERED INDEX [IX_Roles_IsEnabled] ON [jit].[Roles]([IsEnabled] ASC)
     WHERE [IsEnabled] = 1
     WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 
+CREATE NONCLUSTERED INDEX [IX_Roles_RequiresApproval_AutoApproveMinSeniority] ON [jit].[Roles]([RequiresApproval] ASC, [AutoApproveMinSeniority] ASC)
+    WHERE [AutoApproveMinSeniority] IS NOT NULL
+    WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
+
 GO
 
 PRINT 'Table [jit].[Roles] created successfully'

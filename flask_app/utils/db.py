@@ -53,8 +53,15 @@ def execute_procedure(procedure_name, params=None, fetch=True):
         cursor.execute(sql, values)
         
         if fetch:
+            # Check if procedure returns results
+            if cursor.description is None:
+                # Procedure doesn't return results - this is normal for INSERT/UPDATE/DELETE procedures
+                # Commit and return empty list
+                conn.commit()
+                return []
+            
             # Get column names
-            columns = [column[0] for column in cursor.description] if cursor.description else []
+            columns = [column[0] for column in cursor.description]
             
             # Fetch all rows
             rows = cursor.fetchall()

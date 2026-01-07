@@ -27,6 +27,7 @@ PRINT 'Step 1: Creating Identity Management Procedures...'
 :r "sp_User_GetByLogin.sql"
 :r "sp_User_SyncFromAD.sql"
 :r "sp_User_Eligibility_Check.sql"
+:r "sp_Approver_CanApproveRequest.sql"
 PRINT ''
 
 -- =============================================
@@ -54,6 +55,7 @@ PRINT ''
 -- =============================================
 PRINT 'Step 4: Creating Request Workflow Procedures...'
 :r "sp_Request_Create.sql"
+:r "sp_Request_GetRoles.sql"
 :r "sp_Request_ListForUser.sql"
 :r "sp_Request_ListPendingForApprover.sql"
 :r "sp_Request_Cancel.sql"
@@ -67,8 +69,11 @@ PRINT '========================================'
 PRINT ''
 PRINT 'Procedure Dependencies:'
 PRINT '  - sp_Role_ListRequestable depends on sp_User_Eligibility_Check'
-PRINT '  - sp_Request_Create depends on sp_User_Eligibility_Check and sp_Grant_Issue'
-PRINT '  - sp_Request_Approve depends on sp_Grant_Issue'
+PRINT '  - sp_Approver_CanApproveRequest checks all roles in a request (requires Request_Roles table)'
+PRINT '  - sp_Request_Create depends on sp_User_Eligibility_Check and sp_Grant_Issue (supports multiple roles)'
+PRINT '  - sp_Request_Approve depends on sp_Grant_Issue and sp_Approver_CanApproveRequest (creates grants for all roles)'
+PRINT '  - sp_Request_ListPendingForApprover filters by approval capability for all roles in request'
+PRINT '  - sp_Request_GetRoles is a helper procedure (no dependencies)'
 PRINT ''
 GO
 

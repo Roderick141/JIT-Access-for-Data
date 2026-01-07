@@ -261,24 +261,25 @@ select.form-control {
     color: white;
 }
 
-/* Status badges */
+/* Status badges - Note: text color is set by badge classes (white), 
+   these classes are kept for potential future use but don't override colors */
 .status-pending {
-    color: var(--warning);
+    /* Text color handled by badge-warning class */
 }
 
 .status-approved,
 .status-active {
-    color: var(--primary);
+    /* Text color handled by badge-success class */
 }
 
 .status-denied,
 .status-revoked,
 .status-expired {
-    color: var(--danger);
+    /* Text color handled by badge-danger class */
 }
 
 .status-autoapproved {
-    color: var(--info);
+    /* Text color handled by badge-info class */
 }
 
 /* Alerts / Flash messages */

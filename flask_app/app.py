@@ -115,22 +115,38 @@ def user_request():
     
     if request.method == 'POST':
         try:
-            role_id = int(request.form.get('role_id'))
+            # Get multiple role IDs from form (can be list or single value)
+            role_ids_raw = request.form.getlist('role_id')
+            if not role_ids_raw:
+                flash('Please select at least one role', 'error')
+                roles = execute_procedure('jit.sp_Role_ListRequestable', {'UserId': user['UserId']})
+                return render_template('user/request.html', user=user, roles=roles or [])
+            
+            # Convert to comma-separated string for stored procedure
+            role_ids = ','.join(str(int(rid)) for rid in role_ids_raw if rid.strip())
+            
+            if not role_ids:
+                flash('Please select at least one valid role', 'error')
+                roles = execute_procedure('jit.sp_Role_ListRequestable', {'UserId': user['UserId']})
+                return render_template('user/request.html', user=user, roles=roles or [])
+            
             duration_days = int(request.form.get('duration_days'))
             # Convert days to minutes (1 day = 1440 minutes)
             duration_minutes = duration_days * 1440
             justification = request.form.get('justification', '')
             ticket_ref = request.form.get('ticket_ref', '')
             
-            result = execute_procedure('jit.sp_Request_Create', {
+            # Execute procedure that doesn't return results (fetch=False)
+            execute_procedure('jit.sp_Request_Create', {
                 'UserId': user['UserId'],
-                'RoleId': role_id,
+                'RoleIds': role_ids,  # Comma-separated string of role IDs
                 'RequestedDurationMinutes': duration_minutes,
                 'Justification': justification,
                 'TicketRef': ticket_ref if ticket_ref else None
-            })
+            }, fetch=False)
             
-            flash('Request submitted successfully!', 'success')
+            role_count = len(role_ids_raw)
+            flash(f'Request submitted successfully for {role_count} role(s)!', 'success')
             return redirect(url_for('user_dashboard'))
         except Exception as e:
             flash(f'Error submitting request: {str(e)}', 'error')
@@ -169,7 +185,7 @@ def user_cancel(request_id):
         return redirect(url_for('login'))
     
     try:
-        execute_procedure('jit.sp_Request_Cancel', {'RequestId': request_id, 'UserId': user['UserId']})
+        execute_procedure('jit.sp_Request_Cancel', {'RequestId': request_id, 'UserId': user['UserId']}, fetch=False)
         flash('Request cancelled successfully', 'success')
     except Exception as e:
         flash(f'Error cancelling request: {str(e)}', 'error')
@@ -185,6 +201,11 @@ def approver_dashboard():
     user = session.get('user')
     if not user:
         return redirect(url_for('login'))
+    
+    # Ensure role flags are refreshed
+    user['IsApprover'] = is_approver(user.get('UserId'))
+    user['IsAdmin'] = is_admin(user.get('UserId'))
+    session['user'] = user
     
     try:
         requests = execute_procedure('jit.sp_Request_ListPendingForApprover', {'ApproverUserId': user['UserId']})
@@ -204,15 +225,38 @@ def approver_request_detail(request_id):
     
     try:
         # Get request details
-        requests = execute_query(
-            "SELECT * FROM jit.Requests WHERE RequestId = ?",
+        request_data = execute_query(
+            """SELECT 
+                r.RequestId,
+                r.UserId,
+                r.RequestedDurationMinutes,
+                r.Justification,
+                r.TicketRef,
+                r.Status,
+                r.UserDeptSnapshot,
+                r.UserTitleSnapshot,
+                r.CreatedUtc,
+                r.UpdatedUtc,
+                u.DisplayName AS RequesterName,
+                u.LoginName AS RequesterLoginName,
+                u.Department AS RequesterDepartment,
+                u.Division AS RequesterDivision,
+                u.SeniorityLevel AS RequesterSeniority
+            FROM jit.Requests r
+            INNER JOIN jit.Users u ON r.UserId = u.UserId
+            WHERE r.RequestId = ?""",
             [request_id]
         )
-        request_data = requests[0] if requests else None
+        
+        request_data = request_data[0] if request_data else None
         
         if not request_data:
             flash('Request not found', 'error')
             return redirect(url_for('approver_dashboard'))
+        
+        # Get all roles for this request
+        roles = execute_procedure('jit.sp_Request_GetRoles', {'RequestId': request_id})
+        request_data['Roles'] = roles if roles else []
         
         return render_template('approver/approve.html', user=user, request_data=request_data)
     except Exception as e:
@@ -228,12 +272,15 @@ def approver_approve(request_id):
         return redirect(url_for('login'))
     
     try:
+        # Permission check is done in stored procedure, but we can add UI-level check for better UX
+        # The stored procedure will throw an error if permission is denied
+        
         comment = request.form.get('comment', '')
         execute_procedure('jit.sp_Request_Approve', {
             'RequestId': request_id,
             'ApproverUserId': user['UserId'],
             'DecisionComment': comment
-        })
+        }, fetch=False)
         flash('Request approved successfully', 'success')
     except Exception as e:
         flash(f'Error approving request: {str(e)}', 'error')
@@ -249,12 +296,15 @@ def approver_deny(request_id):
         return redirect(url_for('login'))
     
     try:
+        # Permission check is done in stored procedure, but we can add UI-level check for better UX
+        # The stored procedure will throw an error if permission is denied
+        
         comment = request.form.get('comment', '')
         execute_procedure('jit.sp_Request_Deny', {
             'RequestId': request_id,
             'ApproverUserId': user['UserId'],
             'DecisionComment': comment
-        })
+        }, fetch=False)
         flash('Request denied', 'info')
     except Exception as e:
         flash(f'Error denying request: {str(e)}', 'error')

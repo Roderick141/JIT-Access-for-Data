@@ -11,6 +11,11 @@ IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[jit].[sp_Req
     DROP PROCEDURE [jit].[sp_Request_Deny]
 GO
 
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
 CREATE PROCEDURE [jit].[sp_Request_Deny]
     @RequestId BIGINT,
     @ApproverUserId INT,
@@ -22,9 +27,23 @@ BEGIN
     DECLARE @CurrentUser NVARCHAR(255) = SUSER_SNAME();
     DECLARE @UserId INT;
     DECLARE @ApproverLoginName NVARCHAR(255);
+    DECLARE @CanApprove BIT;
+    DECLARE @ApprovalReason NVARCHAR(100);
     
     BEGIN TRY
         BEGIN TRANSACTION;
+        
+        -- Check if approver has permission to deny this request (same as approve)
+        EXEC [jit].[sp_Approver_CanApproveRequest]
+            @ApproverUserId = @ApproverUserId,
+            @RequestId = @RequestId,
+            @CanApprove = @CanApprove OUTPUT,
+            @ApprovalReason = @ApprovalReason OUTPUT;
+        
+        IF @CanApprove = 0
+        BEGIN
+            THROW 50005, 'Approver does not have permission to deny this request', 1;
+        END
         
         -- Get request details
         SELECT @UserId = UserId
