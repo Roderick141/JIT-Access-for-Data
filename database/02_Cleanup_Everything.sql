@@ -10,13 +10,12 @@
 --   Or enable SQLCMD mode in SSMS and run this script
 -- =============================================
 
--- =============================================
--- IMPORTANT: Uncomment the sections below to execute cleanup
--- WARNING: This will delete ALL tables and stored procedures!
--- All data will be permanently lost!
--- =============================================
-
 USE [DMAP_JIT_Permissions]
+GO
+
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
 GO
 
 PRINT '========================================'
@@ -26,16 +25,7 @@ PRINT ''
 PRINT 'WARNING: This will delete ALL tables and stored procedures!'
 PRINT 'All data will be permanently lost!'
 PRINT ''
-PRINT 'Make sure you have uncommented the cleanup sections below!'
-PRINT ''
 GO
-
-USE [DMAP_JIT_Permissions]
-GO
-
--- =============================================
--- UNCOMMENT BELOW TO PROCEED WITH CLEANUP
--- =============================================
 
 -- =============================================
 -- Step 1: Drop All Stored Procedures
@@ -71,6 +61,11 @@ IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[jit].[sp_Req
     DROP PROCEDURE [jit].[sp_Request_ListForUser]
 GO
 PRINT 'Dropped: sp_Request_ListForUser'
+
+IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[jit].[sp_Request_GetRoles]') AND type in (N'P', N'PC'))
+    DROP PROCEDURE [jit].[sp_Request_GetRoles]
+GO
+PRINT 'Dropped: sp_Request_GetRoles'
 
 IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[jit].[sp_Request_Create]') AND type in (N'P', N'PC'))
     DROP PROCEDURE [jit].[sp_Request_Create]
@@ -122,11 +117,6 @@ IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[jit].[sp_Use
 GO
 PRINT 'Dropped: sp_User_ResolveCurrentUser'
 
-IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[jit].[sp_Job_ExpireGrants]') AND type in (N'P', N'PC'))
-    DROP PROCEDURE [jit].[sp_Job_ExpireGrants]
-GO
-PRINT 'Dropped: sp_Job_ExpireGrants'
-
 PRINT ''
 PRINT 'All stored procedures dropped successfully!'
 PRINT ''
@@ -135,6 +125,7 @@ GO
 
 -- =============================================
 -- Step 2: Drop All Tables (in reverse dependency order)
+-- Tables must be dropped in order that respects foreign key constraints
 -- =============================================
 
 PRINT '========================================'
@@ -142,73 +133,86 @@ PRINT 'Step 2: Dropping Tables'
 PRINT '========================================'
 PRINT ''
 
--- Drop tables in reverse order (respecting foreign key dependencies)
--- Start with tables that have foreign keys, then drop referenced tables
+-- Drop tables in reverse dependency order (respecting foreign key dependencies)
+-- Start with tables that have foreign keys pointing to other tables
 
--- Workflow and audit tables (no foreign key dependencies on other jit tables)
+-- Level 1: Tables that depend on Grants, Requests, Users, Roles
 IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[jit].[AuditLog]') AND type in (N'U'))
     DROP TABLE [jit].[AuditLog]
 GO
 PRINT 'Dropped: AuditLog'
 
+-- Level 2: Tables that depend on Grants and DB_Roles
 IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[jit].[Grant_DBRole_Assignments]') AND type in (N'U'))
     DROP TABLE [jit].[Grant_DBRole_Assignments]
 GO
 PRINT 'Dropped: Grant_DBRole_Assignments'
 
+-- Level 3: Tables that depend on Requests and Roles
+IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[jit].[Request_Roles]') AND type in (N'U'))
+    DROP TABLE [jit].[Request_Roles]
+GO
+PRINT 'Dropped: Request_Roles'
+
+-- Level 4: Tables that depend on Requests, Users, and Roles
 IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[jit].[Grants]') AND type in (N'U'))
     DROP TABLE [jit].[Grants]
 GO
 PRINT 'Dropped: Grants'
 
+-- Level 5: Tables that depend on Requests and Users
 IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[jit].[Approvals]') AND type in (N'U'))
     DROP TABLE [jit].[Approvals]
 GO
 PRINT 'Dropped: Approvals'
 
+-- Level 6: Tables that depend on Users
 IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[jit].[Requests]') AND type in (N'U'))
     DROP TABLE [jit].[Requests]
 GO
 PRINT 'Dropped: Requests'
 
--- Eligibility and team tables
+-- Level 7: Eligibility tables that depend on Users and Roles
 IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[jit].[User_To_Role_Eligibility]') AND type in (N'U'))
     DROP TABLE [jit].[User_To_Role_Eligibility]
 GO
 PRINT 'Dropped: User_To_Role_Eligibility'
 
+-- Level 8: Eligibility tables that depend on Roles
 IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[jit].[Role_Eligibility_Rules]') AND type in (N'U'))
     DROP TABLE [jit].[Role_Eligibility_Rules]
 GO
 PRINT 'Dropped: Role_Eligibility_Rules'
 
+-- Level 9: Team membership table that depends on Users and Teams
 IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[jit].[User_Teams]') AND type in (N'U'))
     DROP TABLE [jit].[User_Teams]
 GO
 PRINT 'Dropped: User_Teams'
+
+-- Level 10: Role mapping table that depends on Roles and DB_Roles
+IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[jit].[Role_To_DB_Roles]') AND type in (N'U'))
+    DROP TABLE [jit].[Role_To_DB_Roles]
+GO
+PRINT 'Dropped: Role_To_DB_Roles'
+
+-- Level 11: Core tables with no dependencies on other jit tables
+IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[jit].[DB_Roles]') AND type in (N'U'))
+    DROP TABLE [jit].[DB_Roles]
+GO
+PRINT 'Dropped: DB_Roles'
 
 IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[jit].[Teams]') AND type in (N'U'))
     DROP TABLE [jit].[Teams]
 GO
 PRINT 'Dropped: Teams'
 
--- Role mapping tables
-IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[jit].[Role_To_DB_Roles]') AND type in (N'U'))
-    DROP TABLE [jit].[Role_To_DB_Roles]
-GO
-PRINT 'Dropped: Role_To_DB_Roles'
-
-IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[jit].[DB_Roles]') AND type in (N'U'))
-    DROP TABLE [jit].[DB_Roles]
-GO
-PRINT 'Dropped: DB_Roles'
-
 IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[jit].[Roles]') AND type in (N'U'))
     DROP TABLE [jit].[Roles]
 GO
 PRINT 'Dropped: Roles'
 
--- Users table (referenced by many tables)
+-- Level 12: Users table (referenced by many tables, must be dropped last)
 IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[jit].[Users]') AND type in (N'U'))
     DROP TABLE [jit].[Users]
 GO
@@ -248,7 +252,7 @@ GO
 -- =============================================
 -- Cleanup Complete
 -- =============================================
-/*
+
 PRINT ''
 PRINT '========================================'
 PRINT 'Cleanup Complete!'
@@ -257,14 +261,5 @@ PRINT ''
 PRINT 'All JIT Framework objects have been removed.'
 PRINT 'You can now run the deployment script to recreate everything.'
 PRINT ''
-GO
-*/
-
-PRINT ''
-PRINT '========================================'
-PRINT 'Cleanup script ready'
-PRINT '========================================'
-PRINT ''
 
 GO
-

@@ -193,13 +193,17 @@ BEGIN
         END
         
         -- Validate ticket regex if provided and required
-        -- Note: SQL Server LIKE is not full regex, so this is basic pattern validation
-        -- For full regex support, validation should be done in application layer
+        -- Convert common regex patterns to SQL Server LIKE patterns
         IF @AnyRequiresTicket = 1 AND @TicketRef IS NOT NULL
         BEGIN
+            -- Trim ticket reference to handle any leading/trailing whitespace
+            DECLARE @TicketRefTrimmed NVARCHAR(255) = LTRIM(RTRIM(@TicketRef));
+            
             DECLARE @MatchingRoles NVARCHAR(MAX) = NULL;
             DECLARE @TicketRegex NVARCHAR(255);
             DECLARE @RoleNameForRegex NVARCHAR(255);
+            DECLARE @LikePattern NVARCHAR(255);
+            DECLARE @PatternMatches BIT;
             DECLARE regex_cursor CURSOR FOR 
                 SELECT RoleId, TicketRegex, RoleName 
                 FROM #RoleDetails 
@@ -210,9 +214,41 @@ BEGIN
             
             WHILE @@FETCH_STATUS = 0
             BEGIN
-                -- SQL Server LIKE is not full regex, so this is basic pattern matching
-                -- Application layer should do full regex validation
-                IF @TicketRef NOT LIKE @TicketRegex
+                SET @PatternMatches = 0;
+                SET @LikePattern = @TicketRegex;
+                
+                -- Convert regex pattern to SQL Server LIKE pattern
+                -- Remove start anchor (^)
+                IF LEFT(@LikePattern, 1) = '^'
+                    SET @LikePattern = SUBSTRING(@LikePattern, 2, LEN(@LikePattern) - 1);
+                
+                -- Remove end anchor ($)
+                IF RIGHT(@LikePattern, 1) = '$'
+                    SET @LikePattern = LEFT(@LikePattern, LEN(@LikePattern) - 1);
+                
+                -- Convert [0-9]+ to [0-9]% (one or more digits)
+                SET @LikePattern = REPLACE(@LikePattern, '[0-9]+', '[0-9]%');
+                SET @LikePattern = REPLACE(@LikePattern, '[0-9]{1,}', '[0-9]%');
+                
+                -- Convert [a-zA-Z0-9]+ to [a-zA-Z0-9]% (one or more alphanumeric)
+                SET @LikePattern = REPLACE(@LikePattern, '[a-zA-Z0-9]+', '[a-zA-Z0-9]%');
+                
+                -- Convert \d+ to [0-9]% (digits)
+                SET @LikePattern = REPLACE(@LikePattern, '\d+', '[0-9]%');
+                
+                -- Convert \w+ to [a-zA-Z0-9_]% (word characters)
+                SET @LikePattern = REPLACE(@LikePattern, '\w+', '[a-zA-Z0-9_]%');
+                
+                -- Escape special LIKE characters that should be literal in regex
+                -- But don't escape if they're part of a character class [ ]
+                -- SQL Server LIKE supports [0-9] character classes, so keep them as-is
+                
+                -- Test the pattern using trimmed ticket reference
+                IF @TicketRefTrimmed LIKE @LikePattern
+                    SET @PatternMatches = 1;
+                
+                -- If pattern doesn't match, add to error message
+                IF @PatternMatches = 0
                 BEGIN
                     IF @MatchingRoles IS NULL
                         SET @MatchingRoles = @RoleNameForRegex + ' (format: ' + @TicketRegex + ')';

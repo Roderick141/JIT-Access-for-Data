@@ -51,52 +51,52 @@ PRINT ''
 
 -- Create database roles first (if needed)
 PRINT 'Step 0: Creating database roles (if needed)...'
-:r "00_Create_Test_DB_Roles.sql"
+:r "test_data\00_Create_Test_DB_Roles.sql"
 
 -- Insert test data in dependency order
 PRINT ''
 PRINT 'Step 1: Inserting users...'
-:r "01_Insert_Test_Users.sql"
+:r "test_data\01_Insert_Test_Users.sql"
 
 PRINT ''
 PRINT 'Step 2: Inserting business roles...'
-:r "02_Insert_Test_Roles.sql"
+:r "test_data\02_Insert_Test_Roles.sql"
 
 PRINT ''
 PRINT 'Step 3: Inserting DB roles...'
-:r "03_Insert_Test_DB_Roles.sql"
+:r "test_data\03_Insert_Test_DB_Roles.sql"
 
 PRINT ''
 PRINT 'Step 4: Mapping business roles to DB roles...'
-:r "04_Insert_Test_Role_Mappings.sql"
+:r "test_data\04_Insert_Test_Role_Mappings.sql"
 
 PRINT ''
 PRINT 'Step 5: Inserting teams...'
-:r "05_Insert_Test_Teams.sql"
+:r "test_data\05_Insert_Test_Teams.sql"
 
 PRINT ''
 PRINT 'Step 6: Assigning users to teams...'
-:r "06_Insert_Test_User_Teams.sql"
+:r "test_data\06_Insert_Test_User_Teams.sql"
 
 PRINT ''
 PRINT 'Step 7: Inserting eligibility rules...'
-:r "07_Insert_Test_Eligibility_Rules.sql"
+:r "test_data\07_Insert_Test_Eligibility_Rules.sql"
 
 PRINT ''
 PRINT 'Step 8: Inserting test requests...'
-:r "09_Insert_Test_Requests.sql"
+:r "test_data\09_Insert_Test_Requests.sql"
 
 PRINT ''
 PRINT 'Step 9a: Associating roles with requests...'
-:r "09a_Insert_Test_Request_Roles.sql"
+:r "test_data\09a_Insert_Test_Request_Roles.sql"
 
 PRINT ''
 PRINT 'Step 10: Inserting test grants...'
-:r "10_Insert_Test_Grants.sql"
+:r "test_data\10_Insert_Test_Grants.sql"
 
 PRINT ''
 PRINT 'Step 11: Inserting test approvals...'
-:r "11_Insert_Test_Approvals.sql"
+:r "test_data\11_Insert_Test_Approvals.sql"
 
 PRINT ''
 PRINT '========================================'

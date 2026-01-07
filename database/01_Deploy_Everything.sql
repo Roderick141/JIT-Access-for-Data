@@ -57,7 +57,6 @@ PRINT ''
 -- Uncomment the section below to deploy test data
 -- WARNING: This will insert sample data. Only use for development/testing!
 
-/*
 PRINT '========================================'
 PRINT 'Step 3: Inserting Test Data'
 PRINT '========================================'
@@ -68,7 +67,6 @@ PRINT ''
 PRINT ''
 PRINT 'Test data insertion completed!'
 PRINT ''
-*/
 
 -- =============================================
 -- Deployment Complete

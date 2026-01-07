@@ -86,7 +86,8 @@ BEGIN
         DECLARE @GrantValidFromUtc DATETIME2 = GETUTCDATE();
         DECLARE @GrantValidToUtc DATETIME2 = DATEADD(MINUTE, @RequestedDurationMinutes, GETUTCDATE());
         
-        DECLARE role_cursor CURSOR FOR 
+        -- Use LOCAL cursor scope to avoid conflicts with other procedures
+        DECLARE role_cursor CURSOR LOCAL STATIC FORWARD_ONLY READ_ONLY FOR 
             SELECT RoleId 
             FROM [jit].[Request_Roles] 
             WHERE RequestId = @RequestId;
@@ -113,8 +114,11 @@ BEGIN
             FETCH NEXT FROM role_cursor INTO @CurrentRoleId;
         END
         
-        CLOSE role_cursor;
-        DEALLOCATE role_cursor;
+        IF CURSOR_STATUS('local', 'role_cursor') >= 0
+        BEGIN
+            CLOSE role_cursor;
+            DEALLOCATE role_cursor;
+        END
         
         -- Log audit
         DECLARE @DetailsJson NVARCHAR(MAX) = '{"GrantIds":[' + @GrantIds + ']}';
@@ -125,6 +129,14 @@ BEGIN
         
     END TRY
     BEGIN CATCH
+        -- Clean up cursor if it exists
+        IF CURSOR_STATUS('local', 'role_cursor') >= 0
+        BEGIN
+            IF CURSOR_STATUS('local', 'role_cursor') > -1
+                CLOSE role_cursor;
+            DEALLOCATE role_cursor;
+        END
+        
         IF @@TRANCOUNT > 0
             ROLLBACK TRANSACTION;
         THROW;

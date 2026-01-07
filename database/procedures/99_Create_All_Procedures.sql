@@ -23,11 +23,11 @@ PRINT ''
 -- (No dependencies on other procedures)
 -- =============================================
 PRINT 'Step 1: Creating Identity Management Procedures...'
-:r "sp_User_ResolveCurrentUser.sql"
-:r "sp_User_GetByLogin.sql"
-:r "sp_User_SyncFromAD.sql"
-:r "sp_User_Eligibility_Check.sql"
-:r "sp_Approver_CanApproveRequest.sql"
+:r "procedures\sp_User_ResolveCurrentUser.sql"
+:r "procedures\sp_User_GetByLogin.sql"
+:r "procedures\sp_User_SyncFromAD.sql"
+:r "procedures\sp_User_Eligibility_Check.sql"
+:r "procedures\sp_Approver_CanApproveRequest.sql"
 PRINT ''
 
 -- =============================================
@@ -35,7 +35,7 @@ PRINT ''
 -- (Depends on sp_User_Eligibility_Check)
 -- =============================================
 PRINT 'Step 2: Creating Role Management Procedures...'
-:r "sp_Role_ListRequestable.sql"
+:r "procedures\sp_Role_ListRequestable.sql"
 PRINT ''
 
 -- =============================================
@@ -43,9 +43,9 @@ PRINT ''
 -- (No dependencies, but MUST be created before Request procedures that call them)
 -- =============================================
 PRINT 'Step 3: Creating Grant Management Procedures...'
-:r "sp_Grant_Issue.sql"
-:r "sp_Grant_Expire.sql"
-:r "sp_Grant_ListActiveForUser.sql"
+:r "procedures\sp_Grant_Issue.sql"
+:r "procedures\sp_Grant_Expire.sql"
+:r "procedures\sp_Grant_ListActiveForUser.sql"
 PRINT ''
 
 -- =============================================
@@ -54,13 +54,13 @@ PRINT ''
 -- (sp_Request_Create also depends on sp_User_Eligibility_Check)
 -- =============================================
 PRINT 'Step 4: Creating Request Workflow Procedures...'
-:r "sp_Request_Create.sql"
-:r "sp_Request_GetRoles.sql"
-:r "sp_Request_ListForUser.sql"
-:r "sp_Request_ListPendingForApprover.sql"
-:r "sp_Request_Cancel.sql"
-:r "sp_Request_Approve.sql"
-:r "sp_Request_Deny.sql"
+:r "procedures\sp_Request_Create.sql"
+:r "procedures\sp_Request_GetRoles.sql"
+:r "procedures\sp_Request_ListForUser.sql"
+:r "procedures\sp_Request_ListPendingForApprover.sql"
+:r "procedures\sp_Request_Cancel.sql"
+:r "procedures\sp_Request_Approve.sql"
+:r "procedures\sp_Request_Deny.sql"
 PRINT ''
 
 PRINT '========================================'

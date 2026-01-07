@@ -134,7 +134,7 @@ def user_request():
             # Convert days to minutes (1 day = 1440 minutes)
             duration_minutes = duration_days * 1440
             justification = request.form.get('justification', '')
-            ticket_ref = request.form.get('ticket_ref', '')
+            ticket_ref = request.form.get('ticket_ref', '').strip()  # Trim whitespace
             
             # Execute procedure that doesn't return results (fetch=False)
             execute_procedure('jit.sp_Request_Create', {
