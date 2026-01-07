@@ -219,3 +219,10 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+pyvenv.cfg
+Scripts/activate
+Scripts/activate.bat
+Scripts/Activate.ps1
+Scripts/python.exe
+Scripts/pythonw.exe
+Scripts/activate
