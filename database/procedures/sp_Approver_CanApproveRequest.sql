@@ -117,5 +117,3 @@ BEGIN
 END
 GO
 
-PRINT 'Stored Procedure [jit].[sp_Approver_CanApproveRequest] created successfully'
-GO

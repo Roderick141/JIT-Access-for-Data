@@ -45,5 +45,3 @@ BEGIN
 END
 GO
 
-PRINT 'Stored Procedure [jit].[sp_Request_ListForUser] created successfully'
-GO

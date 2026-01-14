@@ -46,6 +46,3 @@ CREATE NONCLUSTERED INDEX [IX_Grant_DBRole_Assignments_GrantId] ON [jit].[Grant_
 
 GO
 
-PRINT 'Table [jit].[Grant_DBRole_Assignments] created successfully'
-GO
-

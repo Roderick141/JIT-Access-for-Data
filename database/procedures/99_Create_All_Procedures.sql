@@ -63,10 +63,6 @@ PRINT 'Step 4: Creating Request Workflow Procedures...'
 :r "procedures\sp_Request_Deny.sql"
 PRINT ''
 
-PRINT '========================================'
-PRINT 'All stored procedures created successfully!'
-PRINT '========================================'
-PRINT ''
 PRINT 'Procedure Dependencies:'
 PRINT '  - sp_Role_ListRequestable depends on sp_User_Eligibility_Check'
 PRINT '  - sp_Approver_CanApproveRequest checks all roles in a request (requires Request_Roles table)'

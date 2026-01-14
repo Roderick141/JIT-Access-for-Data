@@ -47,6 +47,3 @@ CREATE NONCLUSTERED INDEX [IX_Role_Eligibility_Rules_Priority] ON [jit].[Role_El
 
 GO
 
-PRINT 'Table [jit].[Role_Eligibility_Rules] created successfully'
-GO
-

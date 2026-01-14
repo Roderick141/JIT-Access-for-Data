@@ -143,6 +143,3 @@ BEGIN
 END
 GO
 
-PRINT 'Stored Procedure [jit].[sp_Role_ListRequestable] created successfully'
-GO
-

@@ -37,7 +37,3 @@ BEGIN
     ORDER BY g.ValidToUtc ASC;
 END
 GO
-
-PRINT 'Stored Procedure [jit].[sp_Grant_ListActiveForUser] created successfully'
-GO
-

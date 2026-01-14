@@ -377,5 +377,3 @@ BEGIN
 END
 GO
 
-PRINT 'Stored Procedure [jit].[sp_Request_Create] created successfully'
-GO

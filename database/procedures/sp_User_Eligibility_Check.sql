@@ -188,6 +188,3 @@ BEGIN
 END
 GO
 
-PRINT 'Stored Procedure [jit].[sp_User_Eligibility_Check] created successfully'
-GO
-

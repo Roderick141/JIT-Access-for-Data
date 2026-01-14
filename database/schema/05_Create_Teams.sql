@@ -40,6 +40,3 @@ CREATE NONCLUSTERED INDEX [IX_Teams_IsActive] ON [jit].[Teams]([IsActive] ASC)
 
 GO
 
-PRINT 'Table [jit].[Teams] created successfully'
-GO
-

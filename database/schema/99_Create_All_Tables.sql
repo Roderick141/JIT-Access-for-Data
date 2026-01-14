@@ -36,10 +36,6 @@ PRINT ''
 -- Audit table
 :r "schema\14_Create_AuditLog.sql"
 
-PRINT ''
-PRINT '========================================'
-PRINT 'All tables created successfully!'
-PRINT '========================================'
 GO
 
 -- Note: The :r commands above are SQLCMD syntax. If running in SSMS,

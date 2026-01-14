@@ -118,5 +118,3 @@ BEGIN
 END
 GO
 
-PRINT 'Stored Procedure [jit].[sp_Request_ListPendingForApprover] created successfully'
-GO

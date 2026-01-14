@@ -42,6 +42,3 @@ CREATE NONCLUSTERED INDEX [IX_Request_Roles_RoleId] ON [jit].[Request_Roles]([Ro
 
 GO
 
-PRINT 'Table [jit].[Request_Roles] created successfully'
-GO
-

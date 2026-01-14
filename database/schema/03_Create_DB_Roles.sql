@@ -36,6 +36,3 @@ CREATE UNIQUE NONCLUSTERED INDEX [IX_DB_Roles_DbRoleName] ON [jit].[DB_Roles]([D
 
 GO
 
-PRINT 'Table [jit].[DB_Roles] created successfully'
-GO
-

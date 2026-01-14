@@ -56,6 +56,3 @@ CREATE NONCLUSTERED INDEX [IX_Users_Division_SeniorityLevel] ON [jit].[Users]([D
 
 GO
 
-PRINT 'Table [jit].[Users] created successfully'
-GO
-

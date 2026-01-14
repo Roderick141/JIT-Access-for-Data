@@ -39,6 +39,3 @@ BEGIN
 END
 GO
 
-PRINT 'Stored Procedure [jit].[sp_Request_GetRoles] created successfully'
-GO
-

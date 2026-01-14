@@ -25,6 +25,3 @@ BEGIN
 END
 GO
 
-PRINT 'Schema [jit] created successfully'
-GO
-

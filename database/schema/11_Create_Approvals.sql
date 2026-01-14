@@ -47,6 +47,3 @@ CREATE NONCLUSTERED INDEX [IX_Approvals_ApproverUserId] ON [jit].[Approvals]([Ap
 
 GO
 
-PRINT 'Table [jit].[Approvals] created successfully'
-GO
-

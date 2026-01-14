@@ -65,7 +65,7 @@ A comprehensive solution for managing temporary, time-bound access to SQL Server
 
 4. **Set Up Admin Users**:
    ```sql
-   UPDATE jit.Users SET IsAdmin = 1 WHERE LoginName = 'DOMAIN\adminuser';
+   UPDATE jit.Users SET IsAdmin = 1 WHERE LoginName = 'DOMAIN\admin.user';
    ```
 
 ### Flask Application Setup

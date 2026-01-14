@@ -47,6 +47,3 @@ CREATE NONCLUSTERED INDEX [IX_User_Teams_UserId] ON [jit].[User_Teams]([UserId] 
 
 GO
 
-PRINT 'Table [jit].[User_Teams] created successfully'
-GO
-

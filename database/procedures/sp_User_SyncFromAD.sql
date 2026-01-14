@@ -113,8 +113,5 @@ BEGIN
 END
 GO
 
-PRINT 'Stored Procedure [jit].[sp_User_SyncFromAD] created successfully'
-GO
-
 -- Note: You'll need to create the AD_Staging table separately, or modify this procedure to work with your AD sync method
 

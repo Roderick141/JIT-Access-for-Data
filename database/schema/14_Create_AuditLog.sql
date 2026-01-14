@@ -64,6 +64,3 @@ CREATE NONCLUSTERED INDEX [IX_AuditLog_GrantId] ON [jit].[AuditLog]([GrantId] AS
 
 GO
 
-PRINT 'Table [jit].[AuditLog] created successfully'
-GO
-

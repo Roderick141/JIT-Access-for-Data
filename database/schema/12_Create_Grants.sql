@@ -63,6 +63,3 @@ CREATE NONCLUSTERED INDEX [IX_Grants_RequestId] ON [jit].[Grants]([RequestId] AS
 
 GO
 
-PRINT 'Table [jit].[Grants] created successfully'
-GO
-

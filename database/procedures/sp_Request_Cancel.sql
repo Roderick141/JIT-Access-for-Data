@@ -65,6 +65,3 @@ BEGIN
 END
 GO
 
-PRINT 'Stored Procedure [jit].[sp_Request_Cancel] created successfully'
-GO
-

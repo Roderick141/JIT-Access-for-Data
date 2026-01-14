@@ -65,6 +65,3 @@ BEGIN
 END
 GO
 
-PRINT 'Stored Procedure [jit].[sp_User_ResolveCurrentUser] created successfully'
-GO
-

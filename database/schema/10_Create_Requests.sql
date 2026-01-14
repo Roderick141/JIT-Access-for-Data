@@ -46,6 +46,3 @@ CREATE NONCLUSTERED INDEX [IX_Requests_Status] ON [jit].[Requests]([Status] ASC)
 
 GO
 
-PRINT 'Table [jit].[Requests] created successfully'
-GO
-

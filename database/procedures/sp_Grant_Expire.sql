@@ -137,6 +137,3 @@ BEGIN
 END
 GO
 
-PRINT 'Stored Procedure [jit].[sp_Grant_Expire] created successfully'
-GO
-

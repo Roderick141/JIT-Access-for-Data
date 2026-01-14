@@ -48,6 +48,3 @@ CREATE NONCLUSTERED INDEX [IX_Roles_RequiresApproval_AutoApproveMinSeniority] ON
 
 GO
 
-PRINT 'Table [jit].[Roles] created successfully'
-GO
-
