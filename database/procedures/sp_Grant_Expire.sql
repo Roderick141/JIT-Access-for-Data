@@ -26,7 +26,7 @@ BEGIN
     DECLARE @CurrentUtc DATETIME2 = GETUTCDATE();
     
     DECLARE @GrantId BIGINT;
-    DECLARE @UserId INT;
+    DECLARE @UserId NVARCHAR(255);
     DECLARE @LoginName NVARCHAR(255);
     DECLARE @DbRoleName NVARCHAR(255);
     DECLARE @DbRoleId INT;

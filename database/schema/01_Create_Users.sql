@@ -17,7 +17,7 @@ IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[jit].[Users]
 GO
 
 CREATE TABLE [jit].[Users](
-    [UserId] [int] IDENTITY(1,1) NOT NULL,
+    [UserId] [nvarchar](255) NOT NULL,
     [LoginName] [nvarchar](255) NOT NULL,
     [GivenName] [nvarchar](255) NULL,
     [Surname] [nvarchar](255) NULL,
@@ -27,8 +27,9 @@ CREATE TABLE [jit].[Users](
     [Department] [nvarchar](255) NULL,
     [JobTitle] [nvarchar](255) NULL,
     [SeniorityLevel] [int] NULL,
-    [ManagerLoginName] [nvarchar](255) NULL,
     [IsAdmin] [bit] NOT NULL CONSTRAINT [DF_Users_IsAdmin] DEFAULT (0),
+    [IsApprover] [bit] NOT NULL CONSTRAINT [DF_Users_IsApprover] DEFAULT (0),
+    [IsDataSteward] [bit] NOT NULL CONSTRAINT [DF_Users_IsDataSteward] DEFAULT (0),
     [IsActive] [bit] NOT NULL CONSTRAINT [DF_Users_IsActive] DEFAULT (1),
     [LastAdSyncUtc] [datetime2](7) NULL,
     [CreatedUtc] [datetime2](7) NOT NULL CONSTRAINT [DF_Users_CreatedUtc] DEFAULT (GETUTCDATE()),
@@ -48,6 +49,14 @@ CREATE NONCLUSTERED INDEX [IX_Users_IsActive] ON [jit].[Users]([IsActive] ASC)
 
 CREATE NONCLUSTERED INDEX [IX_Users_IsAdmin] ON [jit].[Users]([IsAdmin] ASC)
     WHERE [IsAdmin] = 1
+    WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
+
+CREATE NONCLUSTERED INDEX [IX_Users_IsApprover] ON [jit].[Users]([IsApprover] ASC)
+    WHERE [IsApprover] = 1
+    WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
+
+CREATE NONCLUSTERED INDEX [IX_Users_IsDataSteward] ON [jit].[Users]([IsDataSteward] ASC)
+    WHERE [IsDataSteward] = 1
     WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 
 CREATE NONCLUSTERED INDEX [IX_Users_Division_SeniorityLevel] ON [jit].[Users]([Division] ASC, [SeniorityLevel] ASC)

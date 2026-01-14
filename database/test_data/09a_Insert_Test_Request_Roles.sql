@@ -16,7 +16,7 @@ GO
 
 PRINT 'Inserting request-role associations...'
 
-DECLARE @UserId1 INT, @UserId2 INT, @UserId3 INT;
+DECLARE @UserId1 NVARCHAR(255), @UserId2 NVARCHAR(255), @UserId3 NVARCHAR(255);
 DECLARE @RoleId1 INT, @RoleId2 INT, @RoleId3 INT, @RoleId4 INT, @RoleId5 INT;
 DECLARE @RequestId1 BIGINT, @RequestId2 BIGINT, @RequestId3 BIGINT, @RequestId4 BIGINT;
 DECLARE @RequestId5 BIGINT, @RequestId6 BIGINT;

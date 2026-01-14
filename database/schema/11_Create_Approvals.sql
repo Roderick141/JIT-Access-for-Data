@@ -19,7 +19,7 @@ GO
 CREATE TABLE [jit].[Approvals](
     [ApprovalId] [bigint] IDENTITY(1,1) NOT NULL,
     [RequestId] [bigint] NOT NULL,
-    [ApproverUserId] [int] NULL,
+    [ApproverUserId] [nvarchar](255) NULL,
     [ApproverLoginName] [nvarchar](255) NOT NULL,
     [Decision] [nvarchar](50) NOT NULL,
     [DecisionComment] [nvarchar](max) NULL,

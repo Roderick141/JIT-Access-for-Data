@@ -17,9 +17,9 @@ GO
 
 PRINT 'Inserting test requests...'
 
-DECLARE @UserId1 INT, @UserId2 INT, @UserId3 INT;
+DECLARE @UserId1 NVARCHAR(255), @UserId2 NVARCHAR(255), @UserId3 NVARCHAR(255);
 
--- Get user IDs
+-- Get user IDs (samaccountname)
 SELECT @UserId1 = UserId FROM [jit].[Users] WHERE LoginName = 'DOMAIN\mike.wilson';
 SELECT @UserId2 = UserId FROM [jit].[Users] WHERE LoginName = 'DOMAIN\alex.taylor';
 SELECT @UserId3 = UserId FROM [jit].[Users] WHERE LoginName = 'DOMAIN\emily.brown';

@@ -18,14 +18,14 @@ GO
 
 CREATE PROCEDURE [jit].[sp_Request_Deny]
     @RequestId BIGINT,
-    @ApproverUserId INT,
+    @ApproverUserId NVARCHAR(255),
     @DecisionComment NVARCHAR(MAX) = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
     
     DECLARE @CurrentUser NVARCHAR(255) = SUSER_SNAME();
-    DECLARE @UserId INT;
+    DECLARE @UserId NVARCHAR(255);
     DECLARE @ApproverLoginName NVARCHAR(255);
     DECLARE @CanApprove BIT;
     DECLARE @ApprovalReason NVARCHAR(100);

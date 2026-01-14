@@ -17,7 +17,7 @@ IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[jit].[User_T
 GO
 
 CREATE TABLE [jit].[User_Teams](
-    [UserId] [int] NOT NULL,
+    [UserId] [nvarchar](255) NOT NULL,
     [TeamId] [int] NOT NULL,
     [IsActive] [bit] NOT NULL CONSTRAINT [DF_User_Teams_IsActive] DEFAULT (1),
     [AssignedUtc] [datetime2](7) NOT NULL CONSTRAINT [DF_User_Teams_AssignedUtc] DEFAULT (GETUTCDATE()),

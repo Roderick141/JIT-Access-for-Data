@@ -18,7 +18,7 @@ GO
 
 CREATE PROCEDURE [jit].[sp_Request_Cancel]
     @RequestId BIGINT,
-    @UserId INT
+    @UserId NVARCHAR(255)
 AS
 BEGIN
     SET NOCOUNT ON;

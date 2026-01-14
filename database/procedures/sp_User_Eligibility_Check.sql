@@ -18,7 +18,7 @@ SET QUOTED_IDENTIFIER ON
 GO
 
 CREATE PROCEDURE [jit].[sp_User_Eligibility_Check]
-    @UserId INT,
+    @UserId NVARCHAR(255),
     @RoleId INT,
     @CanRequest BIT OUTPUT,
     @EligibilityReason NVARCHAR(255) OUTPUT
@@ -72,7 +72,7 @@ BEGIN
     FROM [jit].[Role_Eligibility_Rules]
     WHERE RoleId = @RoleId
     AND ScopeType = 'User'
-    AND ScopeValue = CAST(@UserId AS NVARCHAR(255))
+    AND ScopeValue = @UserId
     AND (ValidFromUtc IS NULL OR ValidFromUtc <= @CurrentDate)
     AND (ValidToUtc IS NULL OR ValidToUtc >= @CurrentDate)
     ORDER BY Priority DESC;

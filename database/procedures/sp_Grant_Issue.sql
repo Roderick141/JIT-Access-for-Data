@@ -17,11 +17,11 @@ GO
 
 CREATE PROCEDURE [jit].[sp_Grant_Issue]
     @RequestId BIGINT = NULL,
-    @UserId INT,
+    @UserId NVARCHAR(255),
     @RoleId INT,
     @ValidFromUtc DATETIME2,
     @ValidToUtc DATETIME2,
-    @IssuedByUserId INT,
+    @IssuedByUserId NVARCHAR(255),
     @GrantId BIGINT OUTPUT
 AS
 BEGIN

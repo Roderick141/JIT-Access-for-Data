@@ -18,7 +18,7 @@ SET QUOTED_IDENTIFIER ON
 GO
 
 CREATE PROCEDURE [jit].[sp_Request_Create]
-    @UserId INT,
+    @UserId NVARCHAR(255),
     @RoleIds NVARCHAR(MAX),  -- Comma-separated role IDs: "1,2,3"
     @RequestedDurationMinutes INT,
     @Justification NVARCHAR(MAX),

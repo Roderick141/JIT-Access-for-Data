@@ -18,7 +18,7 @@ SET QUOTED_IDENTIFIER ON
 GO
 
 CREATE PROCEDURE [jit].[sp_User_ResolveCurrentUser]
-    @UserId INT OUTPUT,
+    @UserId NVARCHAR(255) OUTPUT,
     @LoginName NVARCHAR(255) OUTPUT,
     @DisplayName NVARCHAR(255) OUTPUT,
     @Department NVARCHAR(255) OUTPUT,

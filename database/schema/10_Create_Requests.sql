@@ -18,7 +18,7 @@ GO
 
 CREATE TABLE [jit].[Requests](
     [RequestId] [bigint] IDENTITY(1,1) NOT NULL,
-    [UserId] [int] NOT NULL,
+    [UserId] [nvarchar](255) NOT NULL,
     [RequestedDurationMinutes] [int] NOT NULL,
     [Justification] [nvarchar](max) NULL,
     [TicketRef] [nvarchar](255) NULL,

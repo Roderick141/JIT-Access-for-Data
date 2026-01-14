@@ -18,7 +18,7 @@ SET QUOTED_IDENTIFIER ON
 GO
 
 CREATE PROCEDURE [jit].[sp_Request_ListPendingForApprover]
-    @ApproverUserId INT
+    @ApproverUserId NVARCHAR(255)
 AS
 BEGIN
     SET NOCOUNT ON;

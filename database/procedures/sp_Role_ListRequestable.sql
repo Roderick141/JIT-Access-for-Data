@@ -16,7 +16,7 @@ SET QUOTED_IDENTIFIER ON
 GO
 
 CREATE PROCEDURE [jit].[sp_Role_ListRequestable]
-    @UserId INT
+    @UserId NVARCHAR(255)
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -80,7 +80,7 @@ BEGIN
                 SELECT 1 FROM [jit].[Role_Eligibility_Rules] rer
                 WHERE rer.RoleId = r.RoleId
                 AND rer.ScopeType = 'User'
-                AND rer.ScopeValue = CAST(@UserId AS NVARCHAR(255))
+                AND rer.ScopeValue = @UserId
                 AND rer.CanRequest = 1
                 AND (rer.ValidFromUtc IS NULL OR rer.ValidFromUtc <= @CurrentUtc)
                 AND (rer.ValidToUtc IS NULL OR rer.ValidToUtc >= @CurrentUtc)

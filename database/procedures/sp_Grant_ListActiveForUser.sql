@@ -17,7 +17,7 @@ SET QUOTED_IDENTIFIER ON
 GO
 
 CREATE PROCEDURE [jit].[sp_Grant_ListActiveForUser]
-    @UserId INT
+    @UserId NVARCHAR(255)
 AS
 BEGIN
     SET NOCOUNT ON;

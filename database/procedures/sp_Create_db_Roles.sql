@@ -21,7 +21,7 @@ BEGIN TRY
     -- Fill the temp table with database names
     INSERT INTO #DatabaseList (DatabaseName)
     SELECT DISTINCT [Laag] AS DatabaseName 
-    FROM msdb.ddm.DMAP_Maskering_Classificatie 
+    FROM msdb.dbo.DMAP_Maskering_Classificatie 
     WHERE [Laag] IS NOT NULL 
       AND [Laag] NOT IN ('LOAD', 'STAGE', 'DMAP_StagingIn', 'STUUR', 'TRANS', 
                          'DHH_Prod', 'DHH_Analyse', 'DMAP_Operations', 
@@ -54,8 +54,8 @@ BEGIN TRY
                 
                 -- Schema cursor declaration
                 DECLARE SchemaCursor CURSOR LOCAL STATIC FORWARD_ONLY READ_ONLY FOR
-                    SELECT [schema]
-                    FROM msdb.ddm.DMAP_Maskering_Classificatie
+                    SELECT TRIM([schema])
+                    FROM msdb.dbo.DMAP_Maskering_Classificatie
                     WHERE [schema] NOT IN (''sys'', ''INFORMATION_SCHEMA'')
                       AND [schema] NOT LIKE ''db_%''
                       AND laag = @CurrentDatabaseName
@@ -81,8 +81,8 @@ BEGIN TRY
                     
                     -- Table cursor declaration and logic
                     DECLARE TableCursor CURSOR LOCAL STATIC FORWARD_ONLY READ_ONLY FOR
-                        SELECT tabel
-                        FROM msdb.ddm.DMAP_Maskering_Classificatie
+                        SELECT TRIM(tabel)
+                        FROM msdb.dbo.DMAP_Maskering_Classificatie
                         WHERE [schema] = @SchemaName
                         AND laag = @CurrentDatabaseName;
                     

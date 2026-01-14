@@ -17,7 +17,7 @@ IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[jit].[User_T
 GO
 
 CREATE TABLE [jit].[User_To_Role_Eligibility](
-    [UserId] [int] NOT NULL,
+    [UserId] [nvarchar](255) NOT NULL,
     [RoleId] [int] NOT NULL,
     [CanRequest] [bit] NOT NULL,
     [ValidFromUtc] [datetime2](7) NULL,

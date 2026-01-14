@@ -49,7 +49,7 @@ def get_current_user():
         cursor.execute("""
             SELECT UserId, LoginName, GivenName, Surname, DisplayName, 
                    Email, Division, Department, JobTitle, SeniorityLevel, 
-                   ManagerLoginName, IsAdmin, IsActive
+                   IsAdmin, IsApprover, IsDataSteward, IsActive
             FROM jit.Users 
             WHERE (LoginName = ? OR LoginName LIKE ? OR LoginName = ?)
             AND IsActive = 1
@@ -74,9 +74,7 @@ def get_current_user():
 def is_approver(user_id):
     """
     Check if user has the capability to approve requests
-    Returns True if user is admin OR has the potential to approve
-    (has division AND has seniority level >= at least one role's AutoApproveMinSeniority)
-    This allows users to see the approval page even if no requests are pending.
+    Returns True if user is admin OR IsApprover column is set to 1
     """
     if not user_id:
         return False
@@ -85,44 +83,21 @@ def is_approver(user_id):
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # Check if user is admin (admins can always approve)
+        # Check if user is admin or has IsApprover flag set
         cursor.execute("""
-            SELECT IsAdmin, Division, SeniorityLevel
+            SELECT IsAdmin, IsApprover
             FROM jit.Users 
             WHERE UserId = ? AND IsActive = 1
         """, user_id)
         
         result = cursor.fetchone()
-        if not result:
-            cursor.close()
-            return False
-        
-        is_admin = result[0]
-        division = result[1]
-        seniority = result[2]
-        
-        if is_admin:
-            cursor.close()
-            return True
-        
-        # Check if user has the capability to approve (regardless of pending requests)
-        # User must have: Division AND SeniorityLevel >= at least one role's AutoApproveMinSeniority
-        if division is None or seniority is None:
-            cursor.close()
-            return False
-        
-        # Check if there's at least one role where user's seniority meets the threshold
-        cursor.execute("""
-            SELECT COUNT(*) 
-            FROM jit.Roles
-            WHERE IsEnabled = 1
-            AND AutoApproveMinSeniority IS NOT NULL
-            AND AutoApproveMinSeniority <= ?
-        """, seniority)
-        
-        count = cursor.fetchone()[0]
         cursor.close()
-        return count > 0
+        
+        if result:
+            is_admin = result[0]
+            is_approver = result[1]
+            return bool(is_admin) or bool(is_approver)
+        return False
         
     except Exception as e:
         print(f"Error checking approver status: {e}")

@@ -18,7 +18,7 @@ SET QUOTED_IDENTIFIER ON
 GO
 
 CREATE PROCEDURE [jit].[sp_Approver_CanApproveRequest]
-    @ApproverUserId INT,
+    @ApproverUserId NVARCHAR(255),
     @RequestId BIGINT,
     @CanApprove BIT OUTPUT,
     @ApprovalReason NVARCHAR(100) OUTPUT
@@ -26,7 +26,7 @@ AS
 BEGIN
     SET NOCOUNT ON;
     
-    DECLARE @RequesterUserId INT;
+    DECLARE @RequesterUserId NVARCHAR(255);
     DECLARE @ApproverDivision NVARCHAR(255);
     DECLARE @ApproverSeniority INT;
     DECLARE @ApproverIsAdmin BIT;

@@ -16,10 +16,10 @@ GO
 PRINT 'Inserting test approvals...'
 
 DECLARE @RequestId1 BIGINT, @RequestId2 BIGINT;
-DECLARE @ApproverUserId INT;
-DECLARE @UserId2 INT, @UserId3 INT;
+DECLARE @ApproverUserId NVARCHAR(255);
+DECLARE @UserId2 NVARCHAR(255), @UserId3 NVARCHAR(255);
 
--- Get user IDs
+-- Get user IDs (samaccountname)
 SELECT @ApproverUserId = UserId FROM [jit].[Users] WHERE LoginName = 'DOMAIN\approver1';
 SELECT @UserId2 = UserId FROM [jit].[Users] WHERE LoginName = 'DOMAIN\alex.taylor';
 SELECT @UserId3 = UserId FROM [jit].[Users] WHERE LoginName = 'DOMAIN\emily.brown';

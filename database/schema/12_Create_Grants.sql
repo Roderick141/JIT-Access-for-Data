@@ -19,13 +19,13 @@ GO
 CREATE TABLE [jit].[Grants](
     [GrantId] [bigint] IDENTITY(1,1) NOT NULL,
     [RequestId] [bigint] NULL,
-    [UserId] [int] NOT NULL,
+    [UserId] [nvarchar](255) NOT NULL,
     [RoleId] [int] NOT NULL,
     [ValidFromUtc] [datetime2](7) NOT NULL,
     [ValidToUtc] [datetime2](7) NOT NULL,
     [RevokedUtc] [datetime2](7) NULL,
     [RevokeReason] [nvarchar](max) NULL,
-    [IssuedByUserId] [int] NULL,
+    [IssuedByUserId] [nvarchar](255) NULL,
     [Status] [nvarchar](50) NOT NULL,
     CONSTRAINT [PK_Grants] PRIMARY KEY CLUSTERED ([GrantId] ASC)
     WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)

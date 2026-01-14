@@ -6,7 +6,7 @@
 -- Optionally sync SeniorityLevel from AD attribute
 -- =============================================
 -- Note: This expects a staging table jit.AD_Staging with columns:
--- LoginName, GivenName, Surname, DisplayName, Email, Division, Department, JobTitle, SeniorityLevel, ManagerLoginName
+-- UserId (samaccountname), LoginName, GivenName, Surname, DisplayName, Email, Division, Department, JobTitle, SeniorityLevel
 
 USE [DMAP_JIT_Permissions]
 GO
@@ -48,7 +48,6 @@ BEGIN
             Department = s.Department,
             JobTitle = s.JobTitle,
             SeniorityLevel = s.SeniorityLevel,
-            ManagerLoginName = s.ManagerLoginName,
             LastAdSyncUtc = @SyncDate,
             UpdatedUtc = GETUTCDATE(),
             UpdatedBy = @SyncUser,
@@ -60,14 +59,14 @@ BEGIN
         
         -- Insert new users from staging table
         INSERT INTO [jit].[Users] (
-            LoginName, GivenName, Surname, DisplayName, Email,
-            Division, Department, JobTitle, SeniorityLevel, ManagerLoginName,
-            IsAdmin, LastAdSyncUtc, CreatedBy, UpdatedBy
+            UserId, LoginName, GivenName, Surname, DisplayName, Email,
+            Division, Department, JobTitle, SeniorityLevel,
+            IsAdmin, IsApprover, IsDataSteward, LastAdSyncUtc, CreatedBy, UpdatedBy
         )
         SELECT 
-            s.LoginName, s.GivenName, s.Surname, s.DisplayName, s.Email,
-            s.Division, s.Department, s.JobTitle, s.SeniorityLevel, s.ManagerLoginName,
-            0, @SyncDate, @SyncUser, @SyncUser
+            s.UserId, s.LoginName, s.GivenName, s.Surname, s.DisplayName, s.Email,
+            s.Division, s.Department, s.JobTitle, s.SeniorityLevel,
+            0, 0, 0, @SyncDate, @SyncUser, @SyncUser
         FROM [jit].[AD_Staging] s
         WHERE NOT EXISTS (SELECT 1 FROM [jit].[Users] u WHERE u.LoginName = s.LoginName);
         
