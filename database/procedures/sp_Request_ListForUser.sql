@@ -33,12 +33,14 @@ BEGIN
         r.TicketRef,
         r.Status,
         r.CreatedUtc,
-        r.UpdatedUtc
+        r.UpdatedUtc,
+        a.DecisionComment AS ApproverComment
     FROM [jit].[Requests] r
     INNER JOIN [jit].[Request_Roles] rr ON r.RequestId = rr.RequestId
     INNER JOIN [jit].[Roles] rol ON rr.RoleId = rol.RoleId
+    LEFT JOIN [jit].[Approvals] a ON r.RequestId = a.RequestId
     WHERE r.UserId = @UserId
-    GROUP BY r.RequestId, r.UserId, r.RequestedDurationMinutes, r.Justification, r.TicketRef, r.Status, r.CreatedUtc, r.UpdatedUtc
+    GROUP BY r.RequestId, r.UserId, r.RequestedDurationMinutes, r.Justification, r.TicketRef, r.Status, r.CreatedUtc, r.UpdatedUtc, a.DecisionComment
     ORDER BY r.CreatedUtc DESC;
 END
 GO

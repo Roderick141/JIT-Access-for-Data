@@ -43,19 +43,22 @@ BEGIN TRY
                 PRINT 'Processing database: ' + @DatabaseName;
 
                 -- Build dynamic SQL to execute in the target database
+                -- Note: We need to concatenate @DatabaseName as a string literal since USE changes database context
                 SET @SQL = N'
                 USE ' + QUOTENAME(@DatabaseName) + ';
                 DECLARE @SchemaName NVARCHAR(128);
                 DECLARE @RoleName NVARCHAR(128);
                 DECLARE @TableName NVARCHAR(128);
                 DECLARE @GrantSQL NVARCHAR(MAX);
+                DECLARE @CurrentDatabaseName NVARCHAR(128) = ''' + REPLACE(@DatabaseName, '''', '''''') + ''';
                 
                 -- Schema cursor declaration
                 DECLARE SchemaCursor CURSOR LOCAL STATIC FORWARD_ONLY READ_ONLY FOR
-                    SELECT name
-                    FROM sys.schemas
-                    WHERE name NOT IN (''sys'', ''INFORMATION_SCHEMA'')
-                      AND name NOT LIKE ''db_%'';
+                    SELECT [schema]
+                    FROM msdb.ddm.DMAP_Maskering_Classificatie
+                    WHERE [schema] NOT IN (''sys'', ''INFORMATION_SCHEMA'')
+                      AND [schema] NOT LIKE ''db_%''
+                      AND laag = @CurrentDatabaseName
                 
                 OPEN SchemaCursor;
                 FETCH NEXT FROM SchemaCursor INTO @SchemaName;
@@ -78,10 +81,10 @@ BEGIN TRY
                     
                     -- Table cursor declaration and logic
                     DECLARE TableCursor CURSOR LOCAL STATIC FORWARD_ONLY READ_ONLY FOR
-                        SELECT t.name
-                        FROM sys.tables t
-                        INNER JOIN sys.schemas s ON t.schema_id = s.schema_id
-                        WHERE s.name = @SchemaName;
+                        SELECT tabel
+                        FROM msdb.ddm.DMAP_Maskering_Classificatie
+                        WHERE [schema] = @SchemaName
+                        AND laag = @CurrentDatabaseName;
                     
                     OPEN TableCursor;
                     FETCH NEXT FROM TableCursor INTO @TableName;

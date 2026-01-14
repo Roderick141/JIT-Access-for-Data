@@ -19,6 +19,7 @@
                     <th>Duration</th>
                     <th>Status</th>
                     <th>Justification</th>
+                    <th>Approver Comment</th>
                 </tr>
             </thead>
             <tbody>
@@ -49,6 +50,17 @@
                         {% endif %}
                     </td>
                     <td>{{ req.Justification or 'N/A' }}</td>
+                    <td>
+                        {% if req.ApproverComment %}
+                            {% if req.Status == 'Denied' %}
+                                <span class="text-danger">{{ req.ApproverComment }}</span>
+                            {% else %}
+                                <span class="text-muted">{{ req.ApproverComment }}</span>
+                            {% endif %}
+                        {% else %}
+                            <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
