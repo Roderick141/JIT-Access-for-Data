@@ -29,6 +29,7 @@ BEGIN
     DECLARE @UserId NVARCHAR(255);
     DECLARE @LoginName NVARCHAR(255);
     DECLARE @DbRoleName NVARCHAR(255);
+    DECLARE @DatabaseName NVARCHAR(255);
     DECLARE @DbRoleId INT;
     DECLARE @DropError NVARCHAR(MAX);
     
@@ -52,23 +53,24 @@ BEGIN
             
             -- Get all DB roles for this grant and remove user from each
             DECLARE role_cursor CURSOR FOR
-            SELECT dbr.DbRoleName, dbr.DbRoleId
+            SELECT dbr.DatabaseName, dbr.DbRoleName, dbr.DbRoleId
             FROM [jit].[Grant_DBRole_Assignments] gdba
             INNER JOIN [jit].[DB_Roles] dbr ON gdba.DbRoleId = dbr.DbRoleId
             WHERE gdba.GrantId = @GrantId
             AND gdba.AddSucceeded = 1;
             
             OPEN role_cursor;
-            FETCH NEXT FROM role_cursor INTO @DbRoleName, @DbRoleId;
+            FETCH NEXT FROM role_cursor INTO @DatabaseName, @DbRoleName, @DbRoleId;
             
             WHILE @@FETCH_STATUS = 0
             BEGIN
                 SET @DropError = NULL;
                 
                 BEGIN TRY
-                    -- Remove user from DB role
+                    -- Remove user from DB role in the target database
                     DECLARE @Sql NVARCHAR(MAX) = 
-                        'ALTER ROLE [' + @DbRoleName + '] DROP MEMBER [' + @LoginName + ']';
+                        'USE ' + QUOTENAME(@DatabaseName) + '; ' +
+                        'ALTER ROLE ' + QUOTENAME(@DbRoleName) + ' DROP MEMBER ' + QUOTENAME(@LoginName);
                     EXEC sp_executesql @Sql;
                     
                     -- Record success
@@ -91,10 +93,10 @@ BEGIN
                     -- Log error
                     INSERT INTO [jit].[AuditLog] (EventType, ActorLoginName, TargetUserId, GrantId, DetailsJson)
                     VALUES ('RoleDropError', @CurrentUser, @UserId, @GrantId,
-                        '{"DbRoleName":"' + @DbRoleName + '","Error":"' + @DropError + '"}');
+                        '{"DatabaseName":"' + @DatabaseName + '","DbRoleName":"' + @DbRoleName + '","Error":"' + REPLACE(@DropError, '"', '""') + '"}');
                 END CATCH
                 
-                FETCH NEXT FROM role_cursor INTO @DbRoleName, @DbRoleId;
+                FETCH NEXT FROM role_cursor INTO @DatabaseName, @DbRoleName, @DbRoleId;
             END
             
             CLOSE role_cursor;

@@ -30,6 +30,7 @@ BEGIN
     DECLARE @CurrentUser NVARCHAR(255) = SUSER_SNAME();
     DECLARE @LoginName NVARCHAR(255);
     DECLARE @DbRoleName NVARCHAR(255);
+    DECLARE @DatabaseName NVARCHAR(255);
     
     BEGIN TRY
         BEGIN TRANSACTION;
@@ -58,7 +59,7 @@ BEGIN
         
         -- Get all DB roles for this business role and add user to each
         DECLARE role_cursor CURSOR FOR
-        SELECT dbr.DbRoleName, dbr.DbRoleId
+        SELECT dbr.DatabaseName, dbr.DbRoleName, dbr.DbRoleId
         FROM [jit].[DB_Roles] dbr
         INNER JOIN [jit].[Role_To_DB_Roles] rtdbr ON dbr.DbRoleId = rtdbr.DbRoleId
         WHERE rtdbr.RoleId = @RoleId
@@ -68,16 +69,17 @@ BEGIN
         DECLARE @AddError NVARCHAR(MAX);
         
         OPEN role_cursor;
-        FETCH NEXT FROM role_cursor INTO @DbRoleName, @DbRoleId;
+        FETCH NEXT FROM role_cursor INTO @DatabaseName, @DbRoleName, @DbRoleId;
         
         WHILE @@FETCH_STATUS = 0
         BEGIN
             SET @AddError = NULL;
             
             BEGIN TRY
-                -- Add user to DB role
+                -- Add user to DB role in the target database
                 DECLARE @Sql NVARCHAR(MAX) = 
-                    'ALTER ROLE [' + @DbRoleName + '] ADD MEMBER [' + @LoginName + ']';
+                    'USE ' + QUOTENAME(@DatabaseName) + '; ' +
+                    'ALTER ROLE ' + QUOTENAME(@DbRoleName) + ' ADD MEMBER ' + QUOTENAME(@LoginName);
                 EXEC sp_executesql @Sql;
                 
                 -- Record success
@@ -103,10 +105,10 @@ BEGIN
                 -- Log error but continue with other roles
                 INSERT INTO [jit].[AuditLog] (EventType, ActorLoginName, TargetUserId, GrantId, DetailsJson)
                 VALUES ('RoleAddError', @CurrentUser, @UserId, @GrantId,
-                    '{"DbRoleName":"' + @DbRoleName + '","Error":"' + @AddError + '"}');
+                    '{"DatabaseName":"' + @DatabaseName + '","DbRoleName":"' + @DbRoleName + '","Error":"' + REPLACE(@AddError, '"', '""') + '"}');
             END CATCH
             
-            FETCH NEXT FROM role_cursor INTO @DbRoleName, @DbRoleId;
+            FETCH NEXT FROM role_cursor INTO @DatabaseName, @DbRoleName, @DbRoleId;
         END
         
         CLOSE role_cursor;

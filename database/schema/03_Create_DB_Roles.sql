@@ -18,6 +18,7 @@ GO
 
 CREATE TABLE [jit].[DB_Roles](
     [DbRoleId] [int] IDENTITY(1,1) NOT NULL,
+    [DatabaseName] [nvarchar](255) NOT NULL,
     [DbRoleName] [nvarchar](255) NOT NULL,
     [RoleType] [nvarchar](50) NULL,
     [Description] [nvarchar](max) NULL,
@@ -31,7 +32,7 @@ CREATE TABLE [jit].[DB_Roles](
     WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 )
 
-CREATE UNIQUE NONCLUSTERED INDEX [IX_DB_Roles_DbRoleName] ON [jit].[DB_Roles]([DbRoleName] ASC)
+CREATE UNIQUE NONCLUSTERED INDEX [IX_DB_Roles_DatabaseName_DbRoleName] ON [jit].[DB_Roles]([DatabaseName] ASC, [DbRoleName] ASC)
     WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 
 GO

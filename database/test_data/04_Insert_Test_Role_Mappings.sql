@@ -21,6 +21,7 @@ SELECT r.RoleId, dbr.DbRoleId, 1
 FROM [jit].[Roles] r
 CROSS JOIN [jit].[DB_Roles] dbr
 WHERE r.RoleName = 'Read-Only Reports'
+AND dbr.DatabaseName = 'DMAP_JIT_Permissions'
 AND dbr.DbRoleName = 'JIT_Reports_Reader';
 
 -- Map 'Advanced Analytics' to analytics role
@@ -29,6 +30,7 @@ SELECT r.RoleId, dbr.DbRoleId, 1
 FROM [jit].[Roles] r
 CROSS JOIN [jit].[DB_Roles] dbr
 WHERE r.RoleName = 'Advanced Analytics'
+AND dbr.DatabaseName = 'DMAP_JIT_Permissions'
 AND dbr.DbRoleName = 'JIT_Analytics';
 
 -- Map 'Data Warehouse Reader' to standard datareader
@@ -37,6 +39,7 @@ SELECT r.RoleId, dbr.DbRoleId, 1
 FROM [jit].[Roles] r
 CROSS JOIN [jit].[DB_Roles] dbr
 WHERE r.RoleName = 'Data Warehouse Reader'
+AND dbr.DatabaseName = 'DMAP_JIT_Permissions'
 AND dbr.DbRoleName = 'db_datareader';
 
 -- Map 'Full Database Access' to both reader and writer
@@ -45,6 +48,7 @@ SELECT r.RoleId, dbr.DbRoleId, 1
 FROM [jit].[Roles] r
 CROSS JOIN [jit].[DB_Roles] dbr
 WHERE r.RoleName = 'Full Database Access'
+AND dbr.DatabaseName = 'DMAP_JIT_Permissions'
 AND dbr.DbRoleName IN ('db_datareader', 'db_datawriter');
 
 -- Map 'Data Administrator' to all roles
@@ -53,6 +57,7 @@ SELECT r.RoleId, dbr.DbRoleId, 1
 FROM [jit].[Roles] r
 CROSS JOIN [jit].[DB_Roles] dbr
 WHERE r.RoleName = 'Data Administrator'
+AND dbr.DatabaseName = 'DMAP_JIT_Permissions'
 AND dbr.DbRoleName IN ('db_datareader', 'db_datawriter', 'JIT_Reports_Unmasked');
 
 -- Map 'Temporary Query Access' to standard datareader
@@ -61,6 +66,7 @@ SELECT r.RoleId, dbr.DbRoleId, 1
 FROM [jit].[Roles] r
 CROSS JOIN [jit].[DB_Roles] dbr
 WHERE r.RoleName = 'Temporary Query Access'
+AND dbr.DatabaseName = 'DMAP_JIT_Permissions'
 AND dbr.DbRoleName = 'db_datareader';
 
 PRINT CAST(@@ROWCOUNT AS VARCHAR(10)) + ' role mappings created'

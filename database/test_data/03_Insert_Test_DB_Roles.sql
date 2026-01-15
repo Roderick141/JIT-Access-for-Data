@@ -19,15 +19,16 @@ PRINT 'Inserting test DB roles...'
 PRINT 'WARNING: Ensure these database roles exist in your database, or create them first!'
 
 -- Insert sample database roles
+-- NOTE: Update DatabaseName values to match your actual database names
 INSERT INTO [jit].[DB_Roles] (
-    DbRoleName, RoleType, Description, IsJitManaged, HasUnmask, CreatedBy, UpdatedBy
+    DatabaseName, DbRoleName, RoleType, Description, IsJitManaged, HasUnmask, CreatedBy, UpdatedBy
 )
 VALUES
-    ('db_datareader', 'data_reader', 'Standard read-only access to all tables', 1, 0, 'SYSTEM', 'SYSTEM'),
-    ('db_datawriter', 'data_writer', 'Read and write access to all tables', 1, 0, 'SYSTEM', 'SYSTEM'),
-    ('JIT_Reports_Reader', 'mask_reader', 'Read access to reporting views (masked data)', 1, 0, 'SYSTEM', 'SYSTEM'),
-    ('JIT_Reports_Unmasked', 'ddm_unmask', 'Read access to reporting views (unmasked data)', 1, 1, 'SYSTEM', 'SYSTEM'),
-    ('JIT_Analytics', 'data_reader', 'Access to analytics tables and views', 1, 0, 'SYSTEM', 'SYSTEM');
+    ('DMAP_JIT_Permissions', 'db_datareader', 'data_reader', 'Standard read-only access to all tables', 1, 0, 'SYSTEM', 'SYSTEM'),
+    ('DMAP_JIT_Permissions', 'db_datawriter', 'data_writer', 'Read and write access to all tables', 1, 0, 'SYSTEM', 'SYSTEM'),
+    ('DMAP_JIT_Permissions', 'JIT_Reports_Reader', 'mask_reader', 'Read access to reporting views (masked data)', 1, 0, 'SYSTEM', 'SYSTEM'),
+    ('DMAP_JIT_Permissions', 'JIT_Reports_Unmasked', 'ddm_unmask', 'Read access to reporting views (unmasked data)', 1, 1, 'SYSTEM', 'SYSTEM'),
+    ('DMAP_JIT_Permissions', 'JIT_Analytics', 'data_reader', 'Access to analytics tables and views', 1, 0, 'SYSTEM', 'SYSTEM');
 
 PRINT CAST(@@ROWCOUNT AS VARCHAR(10)) + ' DB roles inserted'
 PRINT ''

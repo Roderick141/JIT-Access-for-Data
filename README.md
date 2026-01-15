@@ -11,6 +11,7 @@ A comprehensive solution for managing temporary, time-bound access to SQL Server
 - **Multi-Role Requests**: Request multiple roles in a single request
 - **Identity Management**: Windows Authentication integration with AD enrichment (no auto-user creation)
 - **Role-Based Access**: Requestable business roles mapped to database roles
+- **Multi-Database Support**: Manage database roles across multiple SQL Server databases
 - **Multi-Scope Eligibility**: Support for user, department, division, team, and global eligibility rules
 - **Auto-Approval**: Pre-approved roles and seniority-based auto-approval
 - **Division + Seniority Approval Model**: Approvers can approve requests from colleagues in their division if they have sufficient seniority
@@ -124,6 +125,14 @@ A comprehensive solution for managing temporary, time-bound access to SQL Server
 - Manage users (set admin flags, view user details)
 
 ## Key Concepts
+
+### Multi-Database Support
+
+The framework supports managing database roles across multiple SQL Server databases:
+- Each database role in `DB_Roles` table includes a `DatabaseName` column
+- The same role name can exist in different databases (e.g., `db_datareader` in Database1 and Database2)
+- Grant operations automatically switch to the correct database context using dynamic SQL
+- This allows managing permissions for multiple databases from a single JIT framework instance
 
 ### Multi-Role Requests
 
