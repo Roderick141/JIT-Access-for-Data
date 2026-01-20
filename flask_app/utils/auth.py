@@ -10,15 +10,47 @@ from .db import get_db_connection, execute_query
 
 def get_windows_username():
     """
-    Get the current Windows username
-    In production with IIS/Windows Auth, this would come from request headers
-    For development, uses environment variables
-    """
-    # Try to get from environment (development)
-    windows_user = os.environ.get('USERNAME') or os.environ.get('USER') or None
+    Get the current Windows username from IIS headers or environment variables.
     
-    # In production, you might get this from request headers if using IIS with Windows Auth:
-    # windows_user = request.headers.get('REMOTE_USER') or request.headers.get('AUTH_USER')
+    IIS sets HTTP_REMOTE_USER server variable → URL Rewrite converts to HTTP_REMOTE_USER header
+    → Flask receives it as REMOTE_USER (HTTP_ prefix is automatically removed by Flask)
+    
+    Priority order based on reliability:
+    1. REMOTE_USER - Most reliable, works with kernel-mode auth (recommended)
+    2. AUTH_USER - Reliable fallback
+    3. LOGON_USER - May be empty with kernel-mode auth (don't rely on this)
+    4. HTTP_REMOTE_USER - Alternative name (some configurations)
+    5. HTTP_X_FORWARDED_USER - If using reverse proxy
+    6. HTTP_X_REMOTE_USER - Alternative forwarded header
+    7. Environment variables (USERNAME/USER) - Development fallback
+    
+    Returns:
+        str: Windows username in format 'DOMAIN\username' or 'username', or None if not found
+    """
+    # Flask receives headers without HTTP_ prefix
+    # IIS internally uses HTTP_REMOTE_USER, but Flask sees REMOTE_USER
+    windows_user = (
+        request.headers.get('REMOTE_USER') or           # Primary - most reliable
+        request.headers.get('AUTH_USER') or             # Fallback 1
+        request.headers.get('LOGON_USER') or            # Fallback 2 (may be empty with kernel-mode auth)
+        request.headers.get('HTTP_REMOTE_USER') or      # Alternative name (some configs)
+        request.headers.get('HTTP_X_FORWARDED_USER') or # If using reverse proxy
+        request.headers.get('HTTP_X_REMOTE_USER') or    # Alternative forwarded header
+        None
+    )
+    
+    # Development fallback - use environment variables when not running under IIS
+    if not windows_user:
+        windows_user = os.environ.get('USERNAME') or os.environ.get('USER') or None
+    
+    # Debug logging (only in debug mode to avoid cluttering logs in production)
+    # Set DEBUG=True in config.py to enable, or remove this block in production
+    if not windows_user:
+        import logging
+        logger = logging.getLogger(__name__)
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug("Warning: No Windows username found in headers")
+            logger.debug(f"Available headers: {list(request.headers.keys())}")
     
     return windows_user
 
