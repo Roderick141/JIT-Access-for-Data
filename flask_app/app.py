@@ -423,18 +423,28 @@ def admin_reports():
 
 @app.route('/debug/auth')
 def debug_auth():
-    """Debug endpoint to check authentication headers and token processing"""
+    """Debug endpoint to check authentication headers and username extraction"""
     from flask import jsonify
     from utils.auth import get_windows_username
     
     headers = dict(request.headers)
     windows_user = get_windows_username()
     
+    # Check for Windows auth headers specifically
+    auth_headers = {
+        'REMOTE_USER': request.headers.get('REMOTE_USER'),
+        'AUTH_USER': request.headers.get('AUTH_USER'),
+        'LOGON_USER': request.headers.get('LOGON_USER'),
+        'HTTP_REMOTE_USER': request.headers.get('HTTP_REMOTE_USER'),
+        'HTTP_AUTH_USER': request.headers.get('HTTP_AUTH_USER'),
+    }
+    
     return jsonify({
-        'headers': headers,
+        'all_headers': headers,
+        'auth_headers': auth_headers,
         'windows_username': windows_user,
-        'x_iis_token': request.headers.get('X-IIS-WindowsAuthToken') or request.headers.get('HTTP_X_IIS_WINDOWSAUTHTOKEN'),
-        'all_headers_keys': list(request.headers.keys())
+        'all_headers_keys': list(request.headers.keys()),
+        'status': 'success' if windows_user else 'failed - check URL Rewrite configuration'
     })
 
 if __name__ == '__main__':
