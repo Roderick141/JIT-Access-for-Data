@@ -13,8 +13,8 @@ def get_windows_username():
     Get the current Windows username from Windows Authentication Token.
     
     When HttpPlatformHandler has forwardWindowsAuthToken="true", IIS forwards
-    the Windows authentication token in the X-IIS-WindowsAuthToken header as a hex value.
-    This token is converted to a handle and used to retrieve the username via win32security.
+    the Windows authentication token in the thread context. The token is accessed
+    via OpenThreadToken rather than using the handle from the header.
     
     Returns:
         str: Windows username in format 'DOMAIN\username' or 'username', or None if not found
@@ -22,8 +22,7 @@ def get_windows_username():
     import logging
     logger = logging.getLogger(__name__)
     
-    # Get the Windows Auth Token from header
-    # Flask may add HTTP_ prefix, so check both variations
+    # Get the Windows Auth Token from header (for verification/debugging)
     auth_token_hex = (
         request.headers.get('X-IIS-WindowsAuthToken') or
         request.headers.get('HTTP_X_IIS_WINDOWSAUTHTOKEN') or
@@ -31,7 +30,6 @@ def get_windows_username():
     )
     
     if not auth_token_hex:
-        # Log available headers for debugging
         all_headers = list(request.headers.keys())
         print(f"DEBUG: X-IIS-WindowsAuthToken header not found. Available headers: {all_headers}")
         if logger.isEnabledFor(logging.DEBUG):
@@ -42,29 +40,96 @@ def get_windows_username():
     try:
         import win32security
         import win32api
+        import win32con
         
-        # Convert hex string to integer (base 16)
+        # Method 1: Use the thread token (HttpPlatformHandler sets it in thread context)
+        # This is the most reliable method when forwardWindowsAuthToken="true"
         try:
-            token_handle = int(auth_token_hex, 16)
-            print(f"DEBUG: Converted hex token {auth_token_hex} to handle {token_handle}")
-        except ValueError as e:
-            error_msg = f"Failed to convert hex token to integer: {e}. Token value: {auth_token_hex}"
-            print(f"ERROR: {error_msg}")
-            logger.error(error_msg)
-            return None
-        
-        # Method 1: Try to use the current thread token (HttpPlatformHandler sets it in thread context)
-        # This is often more reliable than using the handle directly
-        try:
+            # Try to open the thread token (this is what HttpPlatformHandler sets)
             thread_token = win32security.OpenThreadToken(
                 win32api.GetCurrentThread(),
-                win32security.TOKEN_QUERY,
-                False
+                win32security.TOKEN_QUERY | win32security.TOKEN_IMPERSONATE,
+                False  # OpenAsSelf=False means use the impersonation token
             )
             
             if thread_token:
+                # Get user information from the token
                 token_info = win32security.GetTokenInformation(
                     thread_token,
+                    win32security.TokenUser
+                )
+                user_sid = token_info[0]
+                
+                # Convert SID to account name (domain and username)
+                account_name, domain, account_type = win32security.LookupAccountSid(
+                    None,
+                    user_sid
+                )
+                
+                # Format as DOMAIN\username
+                if domain:
+                    windows_user = f"{domain}\\{account_name}"
+                else:
+                    windows_user = account_name
+                
+                win32api.CloseHandle(thread_token)
+                
+                print(f"DEBUG: Successfully retrieved username from thread token: {windows_user}")
+                if logger.isEnabledFor(logging.DEBUG):
+                    logger.debug(f"Successfully retrieved username from thread token: {windows_user}")
+                
+                return windows_user
+            else:
+                print("DEBUG: OpenThreadToken returned None, trying with OpenAsSelf=True")
+                
+        except Exception as e:
+            error_code = win32api.GetLastError()
+            print(f"DEBUG: OpenThreadToken failed (error {error_code}): {e}")
+            # Try with OpenAsSelf=True
+            try:
+                thread_token = win32security.OpenThreadToken(
+                    win32api.GetCurrentThread(),
+                    win32security.TOKEN_QUERY,
+                    True  # OpenAsSelf=True
+                )
+                
+                if thread_token:
+                    token_info = win32security.GetTokenInformation(
+                        thread_token,
+                        win32security.TokenUser
+                    )
+                    user_sid = token_info[0]
+                    
+                    account_name, domain, account_type = win32security.LookupAccountSid(
+                        None,
+                        user_sid
+                    )
+                    
+                    if domain:
+                        windows_user = f"{domain}\\{account_name}"
+                    else:
+                        windows_user = account_name
+                    
+                    win32api.CloseHandle(thread_token)
+                    
+                    print(f"DEBUG: Successfully retrieved username from thread token (OpenAsSelf=True): {windows_user}")
+                    if logger.isEnabledFor(logging.DEBUG):
+                        logger.debug(f"Successfully retrieved username from thread token (OpenAsSelf=True): {windows_user}")
+                    
+                    return windows_user
+            except Exception as e2:
+                print(f"DEBUG: OpenThreadToken with OpenAsSelf=True also failed: {e2}")
+        
+        # Method 2: Try process token as fallback
+        try:
+            process_token = win32security.OpenProcessToken(
+                win32api.GetCurrentProcess(),
+                win32security.TOKEN_QUERY
+            )
+            
+            if process_token:
+                token_info = win32security.GetTokenInformation(
+                    process_token,
                     win32security.TokenUser
                 )
                 user_sid = token_info[0]
@@ -79,25 +144,26 @@ def get_windows_username():
                 else:
                     windows_user = account_name
                 
-                win32api.CloseHandle(thread_token)
+                win32api.CloseHandle(process_token)
                 
-                print(f"DEBUG: Successfully retrieved username from thread token: {windows_user}")
+                print(f"DEBUG: Successfully retrieved username from process token: {windows_user}")
                 if logger.isEnabledFor(logging.DEBUG):
-                    logger.debug(f"Successfully retrieved username from thread token: {windows_user}")
+                    logger.debug(f"Successfully retrieved username from process token: {windows_user}")
                 
                 return windows_user
         except Exception as e:
-            # Thread token might not be available, try handle-based approach
-            print(f"DEBUG: Thread token approach failed: {e}, trying handle-based approach")
-            pass
+            print(f"DEBUG: Process token approach failed: {e}")
         
-        # Method 2: Try to duplicate and use the token handle from header
+        # Method 3: Try using the hex handle from header (if thread/process tokens don't work)
+        # This is less reliable but might work in some configurations
         try:
-            # First, try to open the token handle
-            # Note: The handle from IIS might need special handling
+            token_handle = int(auth_token_hex, 16)
+            print(f"DEBUG: Trying to use token handle from header: {token_handle}")
+            
+            # Try to duplicate the token
             duplicated_token = win32security.DuplicateTokenEx(
                 token_handle,
-                win32security.TOKEN_QUERY | win32security.TOKEN_IMPERSONATE,
+                win32security.TOKEN_QUERY,
                 None,
                 win32security.SecurityImpersonation,
                 win32security.TokenPrimary
@@ -121,48 +187,20 @@ def get_windows_username():
             
             win32api.CloseHandle(duplicated_token)
             
-            print(f"DEBUG: Successfully retrieved username from duplicated token: {windows_user}")
+            print(f"DEBUG: Successfully retrieved username from header token handle: {windows_user}")
             if logger.isEnabledFor(logging.DEBUG):
-                logger.debug(f"Successfully retrieved username from duplicated token: {windows_user}")
+                logger.debug(f"Successfully retrieved username from header token handle: {windows_user}")
             
             return windows_user
             
         except Exception as e:
-            print(f"DEBUG: DuplicateTokenEx failed: {e}, trying direct token query")
-            # Method 3: Try using the token handle directly
-            try:
-                token_info = win32security.GetTokenInformation(
-                    token_handle,
-                    win32security.TokenUser
-                )
-                user_sid = token_info[0]
-                
-                account_name, domain, account_type = win32security.LookupAccountSid(
-                    None,
-                    user_sid
-                )
-                
-                if domain:
-                    windows_user = f"{domain}\\{account_name}"
-                else:
-                    windows_user = account_name
-                
-                print(f"DEBUG: Successfully retrieved username from direct token: {windows_user}")
-                if logger.isEnabledFor(logging.DEBUG):
-                    logger.debug(f"Successfully retrieved username from direct token: {windows_user}")
-                
-                return windows_user
-                
-            except Exception as e2:
-                error_msg = f"All token methods failed. Last error: {e2}"
-                print(f"ERROR: {error_msg}")
-                print(f"ERROR: Token handle value: {token_handle} (hex: {auth_token_hex})")
-                logger.error(error_msg)
-                if logger.isEnabledFor(logging.DEBUG):
-                    logger.debug(f"Token handle value: {token_handle} (hex: {auth_token_hex})")
-                    import traceback
-                    logger.debug(traceback.format_exc())
-                return None
+            error_msg = f"All token methods failed. Last error: {e}"
+            print(f"ERROR: {error_msg}")
+            logger.error(error_msg)
+            if logger.isEnabledFor(logging.DEBUG):
+                import traceback
+                logger.debug(traceback.format_exc())
+            return None
         
     except ImportError:
         error_msg = "pywin32 is not installed. Please install it with: pip install pywin32"
