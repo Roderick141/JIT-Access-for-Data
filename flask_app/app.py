@@ -421,6 +421,22 @@ def admin_reports():
                          audit_logs=audit_logs or [],
                          active_grants=active_grants[0] if active_grants else {'Count': 0})
 
+@app.route('/debug/auth')
+def debug_auth():
+    """Debug endpoint to check authentication headers and token processing"""
+    from flask import jsonify
+    from utils.auth import get_windows_username
+    
+    headers = dict(request.headers)
+    windows_user = get_windows_username()
+    
+    return jsonify({
+        'headers': headers,
+        'windows_username': windows_user,
+        'x_iis_token': request.headers.get('X-IIS-WindowsAuthToken') or request.headers.get('HTTP_X_IIS_WINDOWSAUTHTOKEN'),
+        'all_headers_keys': list(request.headers.keys())
+    })
+
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
 
