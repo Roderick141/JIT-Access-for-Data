@@ -9,16 +9,6 @@ from functools import wraps
 from .db import get_db_connection, execute_query
 
 def get_windows_username():
-    """
-    Get the current Windows username from IIS headers.
-    
-    IIS sets REMOTE_USER server variable when Windows Authentication is enabled.
-    URL Rewrite rules in web.config forward this as HTTP_REMOTE_USER header,
-    which Flask receives as REMOTE_USER (HTTP_ prefix is automatically removed).
-    
-    Returns:
-        str: Windows username in format 'DOMAIN\username' or 'username', or None if not found
-    """
     import logging
     logger = logging.getLogger(__name__)
     
