@@ -2,43 +2,38 @@
 Authentication utilities for JIT Access Framework
 Uses Windows Authentication for user identification, SQL Auth for database connection
 """
-import os
 import pyodbc
-from flask import session, request, redirect, url_for, g
+from flask import session, request, redirect, url_for
 from functools import wraps
 from .db import get_db_connection, execute_query
 
 def get_windows_username():
+    """
+    Get the current Windows username from X-Remote-User header.
+    
+    The YARP gateway running in IIS extracts the Windows authenticated user
+    and forwards it as the X-Remote-User header to the Flask application.
+    
+    Returns:
+        str: Windows username in format DOMAIN\\username or username, or None if not found
+    """
     import logging
     logger = logging.getLogger(__name__)
     
-    # Get Windows username from headers (set by URL Rewrite from IIS server variables)
-    # Flask automatically removes HTTP_ prefix, so HTTP_REMOTE_USER becomes REMOTE_USER
-    windows_user = (
-        request.headers.get('X-Remote-User') or           # Primary - set by URL Rewrite
-  
-        None
-    )
+    # Get Windows username from X-Remote-User header (set by YARP gateway)
+    windows_user = request.headers.get('X-Remote-User')
     
     if not windows_user:
-        # Debug: Log all available headers to help troubleshoot
-        all_headers = dict(request.headers)
-        print(f"DEBUG: No Windows username found in headers. Available headers: {all_headers}")
         if logger.isEnabledFor(logging.DEBUG):
-            logger.debug("No Windows username found in headers")
-            logger.debug(f"Available headers: {all_headers}")
-        
-        # Check if we're missing the URL Rewrite configuration
-        if 'REMOTE_USER' not in all_headers and 'HTTP_REMOTE_USER' not in all_headers:
-            print("WARNING: REMOTE_USER header not found. Check URL Rewrite configuration in web.config")
-            logger.warning("REMOTE_USER header not found. Check URL Rewrite configuration in web.config")
-        
+            logger.debug("X-Remote-User header not found")
+            logger.debug(f"Available headers: {list(request.headers.keys())}")
         return None
     
-    # Log successful retrieval
-    print(f"DEBUG: Retrieved Windows username from header: {windows_user}")
+    # Strip whitespace and return
+    windows_user = windows_user.strip()
+    
     if logger.isEnabledFor(logging.DEBUG):
-        logger.debug(f"Retrieved Windows username from header: {windows_user}")
+        logger.debug(f"Retrieved Windows username from X-Remote-User header: {windows_user}")
     
     return windows_user
     

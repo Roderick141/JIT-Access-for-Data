@@ -1,0 +1,9 @@
+C:\YarpGateway\YarpGateway.exe
+C:\YarpGateway\appsettings.Development.json
+C:\YarpGateway\appsettings.json
+C:\YarpGateway\YarpGateway.dll
+C:\YarpGateway\YarpGateway.deps.json
+C:\YarpGateway\YarpGateway.runtimeconfig.json
+C:\YarpGateway\YarpGateway.pdb
+C:\YarpGateway\System.IO.Hashing.dll
+C:\YarpGateway\Yarp.ReverseProxy.dll
