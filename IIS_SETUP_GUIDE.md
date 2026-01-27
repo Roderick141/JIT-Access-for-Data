@@ -13,7 +13,7 @@ Internet → IIS (Windows Auth) → YARP Gateway (.NET) → Waitress (Python WSG
 **Components:**
 1. **IIS** - Handles Windows Authentication
 2. **YARP Gateway** - .NET reverse proxy that extracts Windows Auth user and forwards as `X-Remote-User` header
-3. **Waitress** - Python WSGI server running Flask as a Windows service
+3. **Waitress** - Python WSGI (Web Server Gateway Interfact) server running Flask as a Windows service
 4. **Flask App** - Your application reading `X-Remote-User` header
 
 ---
