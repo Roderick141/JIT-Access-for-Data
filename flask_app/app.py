@@ -421,32 +421,7 @@ def admin_reports():
                          audit_logs=audit_logs or [],
                          active_grants=active_grants[0] if active_grants else {'Count': 0})
 
-@app.route('/debug/auth')
-def debug_auth():
-    """Debug endpoint to check authentication headers and username extraction"""
-    from flask import jsonify
-    from utils.auth import get_windows_username
-    
-    headers = dict(request.headers)
-    windows_user = get_windows_username()
-    
-    # Check for Windows auth headers specifically
-    auth_headers = {
-        'REMOTE_USER': request.headers.get('REMOTE_USER'),
-        'AUTH_USER': request.headers.get('AUTH_USER'),
-        'LOGON_USER': request.headers.get('LOGON_USER'),
-        'HTTP_REMOTE_USER': request.headers.get('HTTP_REMOTE_USER'),
-        'HTTP_AUTH_USER': request.headers.get('HTTP_AUTH_USER'),
-    }
-    
-    return jsonify({
-        'all_headers': headers,
-        'auth_headers': auth_headers,
-        'windows_username': windows_user,
-        'all_headers_keys': list(request.headers.keys()),
-        'status': 'success' if windows_user else 'failed - check URL Rewrite configuration'
-    })
-
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=True, host='127.0.0.1', port=5001)
+    
 

@@ -15,11 +15,8 @@ def get_windows_username():
     # Get Windows username from headers (set by URL Rewrite from IIS server variables)
     # Flask automatically removes HTTP_ prefix, so HTTP_REMOTE_USER becomes REMOTE_USER
     windows_user = (
-        request.headers.get('REMOTE_USER') or           # Primary - set by URL Rewrite
-        request.headers.get('AUTH_USER') or             # Fallback 1
-        request.headers.get('LOGON_USER') or            # Fallback 2
-        request.headers.get('HTTP_REMOTE_USER') or      # Alternative name (some configs)
-        request.headers.get('HTTP_AUTH_USER') or        # Alternative name
+        request.headers.get('X-Remote-User') or           # Primary - set by URL Rewrite
+  
         None
     )
     
