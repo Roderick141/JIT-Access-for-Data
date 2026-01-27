@@ -425,7 +425,7 @@ Or use Windows Services Manager (`services.msc`)
 - [ ] .NET SDK installed (LTS version)
 - [ ] ASP.NET Core Hosting Bundle installed (matching SDK version)
 - [ ] Python virtual environment created with all dependencies
-- [ ] YARP Gateway published to `C:\inetpub\YarpGateway`
+- [ ] YARP Gateway published to `C:\inetpub\wwwroot\YarpGateway`
 - [ ] IIS Application Pool created and configured
 - [ ] IIS Website created with Windows Authentication enabled
 - [ ] Anonymous Authentication disabled
