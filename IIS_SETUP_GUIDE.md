@@ -202,49 +202,111 @@ def get_windows_username():
 
 ---
 
-## Part 5: Configure Waitress as Windows Service
+## Part 5: Configure Waitress as Windows Service using NSSM
 
-### Step 1: Update waitress_service.py Paths
+NSSM (Non-Sucking Service Manager) is a tool for running applications as Windows services. It's more reliable than Python-based service wrappers.
 
-Update `IIS/WebServer/waitress_service.py` with your actual paths:
+### Step 1: Download and Install NSSM
 
-```python
-# Update these paths to match your deployment
-app_dir = r"C:\apps\flaskapp"  # Your Flask app directory
-python_exe = r"C:\apps\flaskapp\.venv\Scripts\python.exe"  # Your Python executable
-```
+1. Download NSSM from: https://nssm.cc/download
+2. Extract the ZIP file
+3. Copy `nssm.exe` (from the `win64` or `win32` folder) to a permanent location:
+   ```powershell
+   # Example: Copy to C:\Tools\nssm\nssm.exe
+   mkdir C:\Tools\nssm
+   copy nssm.exe C:\Tools\nssm\
+   ```
+4. Add NSSM to PATH (optional but recommended):
+   - Add `C:\Tools\nssm` to your system PATH, or
+   - Use full path when running NSSM commands
 
-### Step 2: Create Logs Directory
+### Step 2: Determine Your Paths
+
+Before installing the service, determine these paths:
+
+- **Flask App Directory**: Where your `flask_app` folder is located
+  - Example: `C:\Repos\JIT-Access-for-Data\flask_app`
+- **Python Executable**: Path to your Python interpreter
+  - If using virtual environment: `C:\Repos\JIT-Access-for-Data\.venv\Scripts\python.exe`
+  - If using system Python: `C:\Python312\python.exe` (or wherever Python is installed)
+- **Logs Directory**: Where to store service logs
+  - Example: `C:\Repos\JIT-Access-for-Data\logs`
+
+### Step 3: Create Logs Directory
 
 ```powershell
-mkdir C:\apps\flaskapp\logs
+# Adjust path to match your project location
+mkdir C:\Repos\JIT-Access-for-Data\logs
 ```
 
-### Step 3: Install Waitress Service
+### Step 4: Install Waitress Service with NSSM
 
 Run PowerShell as Administrator:
 
 ```powershell
-cd C:\apps\flaskapp
-C:\apps\flaskapp\.venv\Scripts\python.exe waitress_service.py install
+# Set your paths (adjust these to match your installation)
+$nssm = "C:\Tools\nssm\nssm.exe"  # Path to nssm.exe
+$serviceName = "FlaskWaitress"
+$pythonExe = "C:\Repos\JIT-Access-for-Data\.venv\Scripts\python.exe"  # Your Python executable
+$appDir = "C:\Repos\JIT-Access-for-Data\flask_app"  # Flask app directory
+$logDir = "C:\Repos\JIT-Access-for-Data\logs"  # Logs directory
+
+# Install the service
+& $nssm install $serviceName $pythonExe "-m waitress --host=127.0.0.1 --port=5001 wsgi:app"
+
+# Set working directory (where wsgi.py is located)
+& $nssm set $serviceName AppDirectory $appDir
+
+# Set display name and description
+& $nssm set $serviceName DisplayName "Flask Waitress Service"
+& $nssm set $serviceName Description "Runs Flask application via Waitress WSGI server"
+
+# Configure logging
+& $nssm set $serviceName AppStdout "$logDir\stdout.log"
+& $nssm set $serviceName AppStderr "$logDir\stderr.log"
+& $nssm set $serviceName AppRotateFiles 1
+& $nssm set $serviceName AppRotateOnline 1
+& $nssm set $serviceName AppRotateSeconds 86400
+& $nssm set $serviceName AppRotateBytes 10485760
+
+# Configure service to restart on failure
+& $nssm set $serviceName AppExit Default Restart
+& $nssm set $serviceName AppRestartDelay 5000
+
+# Set service to start automatically
+& $nssm set $serviceName Start SERVICE_AUTO_START
+
+# Set service account (optional - defaults to LocalSystem)
+# If you need to use a specific account:
+# & $nssm set $serviceName ObjectName "DOMAIN\ServiceAccount" "Password"
 ```
 
-### Step 4: Configure Service Recovery
+**Alternative: Manual Installation via GUI**
 
-Configure the service to restart automatically on failure:
+If you prefer a GUI:
 
-```powershell
-sc failure FlaskWaitress reset= 86400 actions= restart/5000/restart/5000/restart/5000
-```
-
-This configures:
-- Reset failure count daily (`reset=86400`)
-- Restart after 5 seconds on failure (3 attempts)
+1. Run Command Prompt as Administrator
+2. Navigate to NSSM directory: `cd C:\Tools\nssm`
+3. Run: `nssm install FlaskWaitress`
+4. In the NSSM GUI:
+   - **Path**: `C:\Repos\JIT-Access-for-Data\.venv\Scripts\python.exe`
+   - **Startup directory**: `C:\Repos\JIT-Access-for-Data\flask_app`
+   - **Arguments**: `-m waitress --host=127.0.0.1 --port=5001 wsgi:app`
+5. Go to **Log on** tab → Set service account if needed
+6. Go to **I/O** tab:
+   - **Output (stdout)**: `C:\Repos\JIT-Access-for-Data\logs\stdout.log`
+   - **Error (stderr)**: `C:\Repos\JIT-Access-for-Data\logs\stderr.log`
+7. Go to **Exit actions** tab → Set to restart on failure
+8. Click **Install service**
 
 ### Step 5: Start the Service
 
 ```powershell
-C:\apps\flaskapp\.venv\Scripts\python.exe waitress_service.py start
+# Using NSSM
+& $nssm start FlaskWaitress
+
+# Or using Windows Service commands
+Start-Service FlaskWaitress
 ```
 
 ### Step 6: Verify Service Status
@@ -253,7 +315,16 @@ C:\apps\flaskapp\.venv\Scripts\python.exe waitress_service.py start
 Get-Service FlaskWaitress
 ```
 
-Or check Windows Services (services.msc) for "Flask Waitress Service"
+Or check Windows Services (`services.msc`) for "Flask Waitress Service"
+
+### Step 7: Verify Waitress is Running
+
+```powershell
+# Check if port 5001 is listening
+netstat -an | findstr :5001
+
+# Should show: TCP    127.0.0.1:5001    0.0.0.0:0    LISTENING
+```
 
 ---
 
@@ -319,19 +390,32 @@ You should see `X-Remote-User` with your Windows username in format `DOMAIN\user
 - Flask app not accessible
 
 **Solutions:**
-1. Check service logs:
+1. Check NSSM service status:
    ```powershell
-   Get-EventLog -LogName Application -Source FlaskWaitress -Newest 10
+   C:\Tools\nssm\nssm.exe status FlaskWaitress
    ```
 2. Check stdout/stderr logs:
-   - `C:\apps\flaskapp\logs\stdout.log`
-   - `C:\apps\flaskapp\logs\stderr.log`
-3. Verify Python path in `waitress_service.py` is correct
-4. Verify Flask app path is correct
-5. Test manually:
+   - `C:\Repos\JIT-Access-for-Data\logs\stdout.log`
+   - `C:\Repos\JIT-Access-for-Data\logs\stderr.log`
+3. Verify NSSM configuration:
    ```powershell
-   cd C:\apps\flaskapp
-   .venv\Scripts\python.exe -m waitress --host=127.0.0.1 --port=5001 wsgi:app
+   C:\Tools\nssm\nssm.exe get FlaskWaitress AppDirectory
+   C:\Tools\nssm\nssm.exe get FlaskWaitress AppParameters
+   ```
+4. Verify Python path is correct:
+   ```powershell
+   C:\Tools\nssm\nssm.exe get FlaskWaitress Application
+   ```
+5. Test manually (run from flask_app directory):
+   ```powershell
+   cd C:\Repos\JIT-Access-for-Data\flask_app
+   C:\Repos\JIT-Access-for-Data\.venv\Scripts\python.exe -m waitress --host=127.0.0.1 --port=5001 wsgi:app
+   ```
+6. Check Windows Event Viewer → Application logs for NSSM errors
+7. Verify file permissions on Flask app directory
+8. Check if port 5001 is already in use:
+   ```powershell
+   netstat -an | findstr :5001
    ```
 
 ### Issue: X-Remote-User Header Not Present
@@ -357,6 +441,7 @@ You should see `X-Remote-User` with your Windows username in format `DOMAIN\user
 1. Verify Waitress service is running:
    ```powershell
    Get-Service FlaskWaitress
+   C:\Tools\nssm\nssm.exe status FlaskWaitress
    ```
 2. Check if port 5001 is listening:
    ```powershell
@@ -366,7 +451,11 @@ You should see `X-Remote-User` with your Windows username in format `DOMAIN\user
 4. Check Windows Firewall (should allow localhost connections)
 5. Test Waitress directly:
    ```powershell
-   curl http://127.0.0.1:5001/
+   Invoke-WebRequest -Uri "http://127.0.0.1:5001/" -UseDefaultCredentials
+   ```
+6. Check NSSM logs for startup errors:
+   ```powershell
+   Get-Content C:\Repos\JIT-Access-for-Data\logs\stderr.log -Tail 20
    ```
 
 ### Issue: Service Crashes Repeatedly
@@ -376,15 +465,31 @@ You should see `X-Remote-User` with your Windows username in format `DOMAIN\user
 - Event log shows errors
 
 **Solutions:**
-1. Check stderr.log for Python errors
-2. Verify all dependencies are installed in virtual environment
-3. Check database connection (if Flask tries to connect on startup)
-4. Verify file permissions on Flask app directory
-5. Test Flask app manually first:
+1. Check stderr.log for Python errors:
    ```powershell
-   cd C:\apps\flaskapp
-   .venv\Scripts\python.exe wsgi.py
+   Get-Content C:\Repos\JIT-Access-for-Data\logs\stderr.log -Tail 50
    ```
+2. Check NSSM exit code:
+   ```powershell
+   C:\Tools\nssm\nssm.exe status FlaskWaitress
+   ```
+3. Verify all dependencies are installed in virtual environment:
+   ```powershell
+   C:\Repos\JIT-Access-for-Data\.venv\Scripts\python.exe -m pip list
+   ```
+4. Check database connection (if Flask tries to connect on startup)
+5. Verify file permissions on Flask app directory
+6. Verify NSSM paths are correct:
+   ```powershell
+   C:\Tools\nssm\nssm.exe get FlaskWaitress Application
+   C:\Tools\nssm\nssm.exe get FlaskWaitress AppDirectory
+   ```
+7. Test Flask app manually first:
+   ```powershell
+   cd C:\Repos\JIT-Access-for-Data\flask_app
+   C:\Repos\JIT-Access-for-Data\.venv\Scripts\python.exe wsgi.py
+   ```
+8. Check if virtual environment is activated correctly in NSSM (may need full path to Python)
 
 ---
 
@@ -392,31 +497,66 @@ You should see `X-Remote-User` with your Windows username in format `DOMAIN\user
 
 ### Start Service
 ```powershell
-C:\apps\flaskapp\.venv\Scripts\python.exe waitress_service.py start
+# Using NSSM
+C:\Tools\nssm\nssm.exe start FlaskWaitress
+
+# Or using Windows Service commands
+Start-Service FlaskWaitress
 ```
 
 ### Stop Service
 ```powershell
-C:\apps\flaskapp\.venv\Scripts\python.exe waitress_service.py stop
+# Using NSSM
+C:\Tools\nssm\nssm.exe stop FlaskWaitress
+
+# Or using Windows Service commands
+Stop-Service FlaskWaitress
 ```
 
 ### Restart Service
 ```powershell
-C:\apps\flaskapp\.venv\Scripts\python.exe waitress_service.py stop
-C:\apps\flaskapp\.venv\Scripts\python.exe waitress_service.py start
+# Using NSSM
+C:\Tools\nssm\nssm.exe restart FlaskWaitress
+
+# Or using Windows Service commands
+Restart-Service FlaskWaitress
 ```
 
 ### Remove Service
 ```powershell
-C:\apps\flaskapp\.venv\Scripts\python.exe waitress_service.py remove
+# Stop the service first
+C:\Tools\nssm\nssm.exe stop FlaskWaitress
+
+# Remove the service
+C:\Tools\nssm\nssm.exe remove FlaskWaitress confirm
 ```
 
 ### Check Service Status
 ```powershell
+# Using NSSM (shows detailed status)
+C:\Tools\nssm\nssm.exe status FlaskWaitress
+
+# Or using Windows Service commands
 Get-Service FlaskWaitress
 ```
 
-Or use Windows Services Manager (`services.msc`)
+### View Service Configuration
+```powershell
+# View all NSSM settings
+C:\Tools\nssm\nssm.exe get FlaskWaitress Application
+C:\Tools\nssm\nssm.exe get FlaskWaitress AppDirectory
+C:\Tools\nssm\nssm.exe get FlaskWaitress AppParameters
+
+# Or use Windows Services Manager (services.msc) for basic management
+```
+
+### Edit Service Configuration
+```powershell
+# Open NSSM GUI to edit settings
+C:\Tools\nssm\nssm.exe edit FlaskWaitress
+```
+
+Or use Windows Services Manager (`services.msc`) for basic operations
 
 ---
 
@@ -429,7 +569,8 @@ Or use Windows Services Manager (`services.msc`)
 - [ ] IIS Application Pool created and configured
 - [ ] IIS Website created with Windows Authentication enabled
 - [ ] Anonymous Authentication disabled
-- [ ] Waitress service installed and configured
+- [ ] NSSM installed
+- [ ] Waitress service installed and configured via NSSM
 - [ ] Service recovery configured (auto-restart on failure)
 - [ ] Logs directory created and accessible
 - [ ] File permissions configured
@@ -461,7 +602,8 @@ Or use Windows Services Manager (`services.msc`)
 - [YARP Documentation](https://microsoft.github.io/reverse-proxy/)
 - [Waitress Documentation](https://docs.pylonsproject.org/projects/waitress/)
 - [ASP.NET Core Hosting Bundle](https://dotnet.microsoft.com/download/dotnet)
-- [Windows Service with Python](https://pypi.org/project/pywin32/)
+- [NSSM Documentation](https://nssm.cc/usage)
+- [NSSM Download](https://nssm.cc/download)
 
 ---
 
@@ -469,7 +611,7 @@ Or use Windows Services Manager (`services.msc`)
 
 If you encounter issues:
 
-1. **Check Waitress logs**: `C:\apps\flaskapp\logs\stdout.log` and `stderr.log`
+1. **Check Waitress logs**: `C:\Repos\JIT-Access-for-Data\logs\stdout.log` and `stderr.log`
 2. **Check Windows Event Viewer**: Application logs for service errors
 3. **Check IIS logs**: `C:\inetpub\logs\LogFiles\W3SVC*\`
 4. **Verify YARP configuration**: Check `appsettings.json` and `Program.cs`
