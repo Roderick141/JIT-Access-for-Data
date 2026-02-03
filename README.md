@@ -262,18 +262,20 @@ UPDATE jit.Users SET IsAdmin = 1 WHERE LoginName = 'DOMAIN\adminuser';
 
 ## Development Testing
 
-In development, the Flask app uses the `USERNAME` environment variable to identify users. Test as different users:
+In development (`FLASK_ENV=development`), the Flask app can use a local environment variable to identify users. Set `JIT_FAKE_USER` (preferred) or `USERNAME` to test as different users:
 
 **Windows PowerShell**:
 ```powershell
-$env:USERNAME = "DOMAIN\john.smith"
+$env:FLASK_ENV = "development"
+$env:JIT_FAKE_USER = "DOMAIN\john.smith"
 cd flask_app
 python app.py
 ```
 
 **Windows Command Prompt**:
 ```cmd
-set USERNAME=DOMAIN\john.smith
+set FLASK_ENV=development
+set JIT_FAKE_USER=DOMAIN\john.smith
 cd flask_app
 python app.py
 ```

@@ -2,6 +2,7 @@
 Authentication utilities for JIT Access Framework
 Uses Windows Authentication for user identification, SQL Auth for database connection
 """
+import os
 import pyodbc
 from flask import session, request, redirect, url_for
 from functools import wraps
@@ -20,6 +21,24 @@ def get_windows_username():
     import logging
     logger = logging.getLogger(__name__)
     
+    # In development, allow a local env var to fake the user for testing.
+    # This is only enabled when FLASK_ENV=development.
+    if os.getenv('FLASK_ENV') == 'development':
+        fake_user = os.getenv('JIT_FAKE_USER')
+        if fake_user and fake_user.strip():
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug("Using JIT_FAKE_USER for development testing")
+            return fake_user.strip()
+
+        # Fall back to local OS user when no header is present (local dev).
+        header_user = request.headers.get('X-Remote-User')
+        if not header_user:
+            env_user = os.getenv('USERNAME') or os.getenv('USER')
+            if env_user and env_user.strip():
+                if logger.isEnabledFor(logging.DEBUG):
+                    logger.debug("Using local environment username for development testing")
+                return env_user.strip()
+
     # Get Windows username from X-Remote-User header (set by YARP gateway)
     windows_user = request.headers.get('X-Remote-User')
     
