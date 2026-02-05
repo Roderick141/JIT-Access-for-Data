@@ -1,0 +1,27 @@
+@startuml
+title JIT Access - Login and User Resolution
+actor User
+participant Browser
+participant "YARP/IIS Gateway" as Gateway
+participant "Flask App" as App
+participant "Auth Utils" as Auth
+database "SQL Server" as DB
+
+User -> Browser: Navigate to / or /login
+Browser -> Gateway: HTTP GET / or /login
+Gateway -> App: Forward request + X-Remote-User
+App -> Auth: get_current_user()
+Auth -> Auth: get_windows_username()
+Auth --> App: windows username or None
+App -> DB: Query jit.Users by login name
+DB --> App: User row or empty
+
+alt User found
+  App -> App: Set role flags (IsApprover/IsAdmin)
+  App --> Browser: 302 Redirect /user/dashboard
+  Browser --> User: Dashboard page
+else User not found
+  App --> Browser: Render login.html
+  Browser --> User: Login page
+end
+@enduml

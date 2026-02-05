@@ -1,0 +1,33 @@
+@startuml
+title JIT Access - Approver Reviews and Decides
+actor Approver
+participant Browser
+participant "Flask App" as App
+database "SQL Server" as DB
+
+Approver -> Browser: Open /approver/dashboard
+Browser -> App: GET /approver/dashboard
+App -> DB: sp_Request_ListPendingForApprover(ApproverUserId)
+DB --> App: Pending requests
+App --> Browser: Render approver dashboard
+
+Approver -> Browser: Open request detail
+Browser -> App: GET /approver/request/{id}
+App -> DB: Query request + requester info
+DB --> App: Request details
+App -> DB: sp_Request_GetRoles(RequestId)
+DB --> App: Roles
+App --> Browser: Render approval page
+
+Approver -> Browser: Approve or Deny
+Browser -> App: POST /approver/approve/{id} or /approver/deny/{id}
+alt Approve
+  App -> DB: sp_Request_Approve(RequestId, ApproverUserId, Comment)
+  DB --> App: OK (grants issued)
+  App --> Browser: Redirect to dashboard (success)
+else Deny
+  App -> DB: sp_Request_Deny(RequestId, ApproverUserId, Comment)
+  DB --> App: OK
+  App --> Browser: Redirect to dashboard (info)
+end
+@enduml

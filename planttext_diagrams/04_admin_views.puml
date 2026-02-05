@@ -1,0 +1,35 @@
+@startuml
+title JIT Access - Admin Views and Reports
+actor Admin
+participant Browser
+participant "Flask App" as App
+database "SQL Server" as DB
+
+Admin -> Browser: Open admin page (roles/teams/eligibility/users/reports)
+Browser -> App: GET /admin/{section}
+App -> App: admin_required (session + IsAdmin)
+
+alt Roles
+  App -> DB: SELECT * FROM jit.Roles
+  DB --> App: Roles
+  App --> Browser: Render roles page
+else Teams
+  App -> DB: SELECT * FROM jit.Teams WHERE IsActive = 1
+  DB --> App: Teams
+  App --> Browser: Render teams page
+else Eligibility
+  App -> DB: Query role eligibility rules + role names
+  DB --> App: Rules
+  App --> Browser: Render eligibility page
+else Users
+  App -> DB: SELECT * FROM jit.Users
+  DB --> App: Users
+  App --> Browser: Render users page
+else Reports
+  App -> DB: SELECT TOP 100 * FROM jit.AuditLog
+  DB --> App: Audit logs
+  App -> DB: SELECT COUNT(*) FROM jit.Grants WHERE Status='Active'
+  DB --> App: Active grant count
+  App --> Browser: Render reports page
+end
+@enduml

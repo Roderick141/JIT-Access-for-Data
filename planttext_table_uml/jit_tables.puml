@@ -1,0 +1,206 @@
+@startuml
+title JIT Access - Database Tables (UML)
+hide circle
+skinparam classAttributeIconSize 0
+
+class Users {
+  UserId : nvarchar(255) <<PK>>
+  LoginName : nvarchar(255)
+  GivenName : nvarchar(255)
+  Surname : nvarchar(255)
+  DisplayName : nvarchar(255)
+  Email : nvarchar(255)
+  Division : nvarchar(255)
+  Department : nvarchar(255)
+  JobTitle : nvarchar(255)
+  SeniorityLevel : int
+  IsAdmin : bit
+  IsApprover : bit
+  IsDataSteward : bit
+  IsActive : bit
+  LastAdSyncUtc : datetime2
+  CreatedUtc : datetime2
+  UpdatedUtc : datetime2
+  CreatedBy : nvarchar(255)
+  UpdatedBy : nvarchar(255)
+}
+
+class Roles {
+  RoleId : int <<PK>>
+  RoleName : nvarchar(255)
+  Description : nvarchar(max)
+  MaxDurationMinutes : int
+  RequiresTicket : bit
+  TicketRegex : nvarchar(255)
+  RequiresJustification : bit
+  RequiresApproval : bit
+  AutoApproveMinSeniority : int
+  IsEnabled : bit
+  CreatedUtc : datetime2
+  UpdatedUtc : datetime2
+  CreatedBy : nvarchar(255)
+  UpdatedBy : nvarchar(255)
+}
+
+class DB_Roles {
+  DbRoleId : int <<PK>>
+  DatabaseName : nvarchar(255)
+  DbRoleName : nvarchar(255)
+  RoleType : nvarchar(50)
+  Description : nvarchar(max)
+  IsJitManaged : bit
+  HasUnmask : bit
+  CreatedUtc : datetime2
+  UpdatedUtc : datetime2
+  CreatedBy : nvarchar(255)
+  UpdatedBy : nvarchar(255)
+}
+
+class Role_To_DB_Roles {
+  RoleId : int <<PK,FK>>
+  DbRoleId : int <<PK,FK>>
+  IsRequired : bit
+}
+
+class Teams {
+  TeamId : int <<PK>>
+  TeamName : nvarchar(255)
+  Description : nvarchar(max)
+  Division : nvarchar(255)
+  Department : nvarchar(255)
+  IsActive : bit
+  CreatedUtc : datetime2
+  UpdatedUtc : datetime2
+  CreatedBy : nvarchar(255)
+  UpdatedBy : nvarchar(255)
+}
+
+class User_Teams {
+  UserId : nvarchar(255) <<PK,FK>>
+  TeamId : int <<PK,FK>>
+  IsActive : bit
+  AssignedUtc : datetime2
+  RemovedUtc : datetime2
+}
+
+class Role_Eligibility_Rules {
+  EligibilityRuleId : int <<PK>>
+  RoleId : int <<FK>>
+  ScopeType : nvarchar(50)
+  ScopeValue : nvarchar(255)
+  CanRequest : bit
+  ValidFromUtc : datetime2
+  ValidToUtc : datetime2
+  Priority : int
+  CreatedUtc : datetime2
+  UpdatedUtc : datetime2
+  CreatedBy : nvarchar(255)
+  UpdatedBy : nvarchar(255)
+}
+
+class User_To_Role_Eligibility {
+  UserId : nvarchar(255) <<PK,FK>>
+  RoleId : int <<PK,FK>>
+  CanRequest : bit
+  ValidFromUtc : datetime2
+  ValidToUtc : datetime2
+  Priority : int
+}
+
+class Requests {
+  RequestId : bigint <<PK>>
+  UserId : nvarchar(255) <<FK>>
+  RequestedDurationMinutes : int
+  Justification : nvarchar(max)
+  TicketRef : nvarchar(255)
+  Status : nvarchar(50)
+  UserDeptSnapshot : nvarchar(255)
+  UserTitleSnapshot : nvarchar(255)
+  CreatedUtc : datetime2
+  UpdatedUtc : datetime2
+  CreatedBy : nvarchar(255)
+}
+
+class Request_Roles {
+  RequestId : bigint <<PK,FK>>
+  RoleId : int <<PK,FK>>
+  CreatedUtc : datetime2
+}
+
+class Approvals {
+  ApprovalId : bigint <<PK>>
+  RequestId : bigint <<FK>>
+  ApproverUserId : nvarchar(255) <<FK>>
+  ApproverLoginName : nvarchar(255)
+  Decision : nvarchar(50)
+  DecisionComment : nvarchar(max)
+  DecisionUtc : datetime2
+}
+
+class Grants {
+  GrantId : bigint <<PK>>
+  RequestId : bigint <<FK>>
+  UserId : nvarchar(255) <<FK>>
+  RoleId : int <<FK>>
+  ValidFromUtc : datetime2
+  ValidToUtc : datetime2
+  RevokedUtc : datetime2
+  RevokeReason : nvarchar(max)
+  IssuedByUserId : nvarchar(255) <<FK>>
+  Status : nvarchar(50)
+}
+
+class Grant_DBRole_Assignments {
+  GrantId : bigint <<PK,FK>>
+  DbRoleId : int <<PK,FK>>
+  AddAttemptUtc : datetime2
+  AddSucceeded : bit
+  AddError : nvarchar(max)
+  DropAttemptUtc : datetime2
+  DropSucceeded : bit
+  DropError : nvarchar(max)
+}
+
+class AuditLog {
+  AuditId : bigint <<PK>>
+  EventUtc : datetime2
+  EventType : nvarchar(100)
+  ActorUserId : nvarchar(255) <<FK>>
+  ActorLoginName : nvarchar(255)
+  TargetUserId : nvarchar(255) <<FK>>
+  RequestId : bigint <<FK>>
+  GrantId : bigint <<FK>>
+  DetailsJson : nvarchar(max)
+}
+
+' Relationships
+Users "1" -- "0..*" Requests : Requestor
+Requests "1" -- "0..*" Request_Roles
+Roles "1" -- "0..*" Request_Roles
+
+Requests "1" -- "0..*" Approvals
+Users "0..1" -- "0..*" Approvals : Approver
+
+Users "1" -- "0..*" Grants : Grantee
+Roles "1" -- "0..*" Grants
+Requests "0..1" -- "0..*" Grants
+Users "0..1" -- "0..*" Grants : IssuedBy
+
+Grants "1" -- "0..*" Grant_DBRole_Assignments
+DB_Roles "1" -- "0..*" Grant_DBRole_Assignments
+
+Roles "1" -- "0..*" Role_To_DB_Roles
+DB_Roles "1" -- "0..*" Role_To_DB_Roles
+
+Users "1" -- "0..*" User_Teams
+Teams "1" -- "0..*" User_Teams
+
+Roles "1" -- "0..*" Role_Eligibility_Rules
+Users "1" -- "0..*" User_To_Role_Eligibility
+Roles "1" -- "0..*" User_To_Role_Eligibility
+
+Users "0..1" -- "0..*" AuditLog : Actor
+Users "0..1" -- "0..*" AuditLog : Target
+Requests "0..1" -- "0..*" AuditLog
+Grants "0..1" -- "0..*" AuditLog
+@enduml
