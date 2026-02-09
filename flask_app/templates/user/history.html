@@ -3,79 +3,88 @@
 {% block title %}Request History - JIT Access{% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <h1 class="page-title">Request History</h1>
-    <p class="page-subtitle">View all your access requests</p>
-</div>
+<header class="PageHeader">
+  <div>
+    <h1 class="PageTitle">Request History</h1>
+    <p class="PageSubtitle">All requests you’ve submitted and their outcomes.</p>
+  </div>
+  <div class="PageActions">
+    <a class="Button Button--primary" href="{{ url_for('user_request') }}">New Request</a>
+    <a class="Button" href="{{ url_for('user_dashboard') }}">Back</a>
+  </div>
+</header>
 
-<div class="card">
-    <div class="card-body">
-        {% if requests %}
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Roles</th>
-                    <th>Requested</th>
-                    <th>Duration</th>
-                    <th>Status</th>
-                    <th>Justification</th>
-                    <th>Approver Comment</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for req in requests %}
-                <tr>
-                    <td>
-                        {% if req.RoleCount and req.RoleCount > 1 %}
-                            <strong>{{ req.RoleCount }} roles:</strong> {{ req.RoleNames or 'N/A' }}
-                        {% else %}
-                            {{ req.RoleNames or req.RoleName or 'N/A' }}
-                        {% endif %}
-                    </td>
-                    <td>{{ req.CreatedUtc.strftime('%Y-%m-%d %H:%M') if req.CreatedUtc else 'N/A' }}</td>
-                    <td>{% set days = req.RequestedDurationMinutes | minutes_to_days %}{{ days }} day{% if days != 1 %}s{% endif %}</td>
-                    <td>
-                        {% if req.Status == 'AutoApproved' %}
-                            <span class="badge badge-info status-autoapproved">Auto-Approved</span>
-                        {% elif req.Status == 'Pending' %}
-                            <span class="badge badge-warning status-pending">Pending</span>
-                        {% elif req.Status == 'Approved' %}
-                            <span class="badge badge-success status-approved">Approved</span>
-                        {% elif req.Status == 'Denied' %}
-                            <span class="badge badge-danger status-denied">Denied</span>
-                        {% elif req.Status == 'Cancelled' %}
-                            <span class="badge badge-secondary">Cancelled</span>
-                        {% else %}
-                            <span class="badge badge-secondary">{{ req.Status }}</span>
-                        {% endif %}
-                    </td>
-                    <td>{{ req.Justification or 'N/A' }}</td>
-                    <td>
-                        {% if req.ApproverComment %}
-                            {% if req.Status == 'Denied' %}
-                                <span class="text-danger">{{ req.ApproverComment }}</span>
-                            {% else %}
-                                <span class="text-muted">{{ req.ApproverComment }}</span>
-                            {% endif %}
-                        {% else %}
-                            <span class="text-muted">—</span>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
+<section class="Card" aria-label="Request history">
+  <div class="Card__hd">
+    <h2 class="Card__title">Requests</h2>
+  </div>
+  <div class="Card__bd">
+    {% if requests %}
+      <div class="TableWrap">
+        <table class="Table">
+          <thead>
+            <tr>
+              <th>Roles</th>
+              <th>Requested</th>
+              <th>Duration</th>
+              <th>Status</th>
+              <th>Justification</th>
+              <th>Approver Comment</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for req in requests %}
+              <tr>
+                <td>
+                  {% if req.RoleCount and req.RoleCount > 1 %}
+                    <strong>{{ req.RoleCount }} roles:</strong> {{ req.RoleNames or 'N/A' }}
+                  {% else %}
+                    <strong>{{ req.RoleNames or req.RoleName or 'N/A' }}</strong>
+                  {% endif %}
+                </td>
+                <td>{{ req.CreatedUtc.strftime('%Y-%m-%d %H:%M') if req.CreatedUtc else 'N/A' }}</td>
+                <td>{% set days = req.RequestedDurationMinutes | minutes_to_days %}{{ days }} day{% if days != 1 %}s{% endif %}</td>
+                <td>
+                  {% if req.Status == 'AutoApproved' %}
+                    <span class="Badge Badge--info">Auto-Approved</span>
+                  {% elif req.Status == 'Pending' %}
+                    <span class="Badge Badge--warning">Pending</span>
+                  {% elif req.Status == 'Approved' %}
+                    <span class="Badge Badge--success">Approved</span>
+                  {% elif req.Status == 'Denied' %}
+                    <span class="Badge Badge--danger">Denied</span>
+                  {% elif req.Status == 'Cancelled' %}
+                    <span class="Badge">Cancelled</span>
+                  {% else %}
+                    <span class="Badge">{{ req.Status }}</span>
+                  {% endif %}
+                </td>
+                <td>{{ req.Justification or 'N/A' }}</td>
+                <td>
+                  {% if req.ApproverComment %}
+                    {% if req.Status == 'Denied' %}
+                      <span style="color: var(--danger);">{{ req.ApproverComment }}</span>
+                    {% else %}
+                      <span style="color: var(--subtle);">{{ req.ApproverComment }}</span>
+                    {% endif %}
+                  {% else %}
+                    <span style="color: var(--subtle);">—</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
         </table>
-        {% else %}
-        <div class="empty-state">
-            <p>No requests found</p>
-            <a href="{{ url_for('user_request') }}" class="btn btn-primary mt-2">Make a Request</a>
+      </div>
+    {% else %}
+      <div class="EmptyState">
+        <p class="EmptyState__title">No requests found</p>
+        <p>Create a request to get temporary access.</p>
+        <div style="margin-top: var(--s-5);">
+          <a class="Button Button--primary" href="{{ url_for('user_request') }}">Make a Request</a>
         </div>
-        {% endif %}
-    </div>
-</div>
-
-<div class="mt-2">
-    <a href="{{ url_for('user_dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
-</div>
+      </div>
+    {% endif %}
+  </div>
+</section>
 {% endblock %}
-

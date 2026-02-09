@@ -3,15 +3,27 @@
 {% block title %}Login - JIT Access{% endblock %}
 
 {% block content %}
-<div style="max-width: 400px; margin: 5rem auto; text-align: center;">
-    <div class="card">
-        <div class="card-header">JIT Access Framework</div>
-        <div class="card-body">
-            <p class="mb-2">Windows Authentication</p>
-            <p class="text-muted mb-3">This application uses Windows Authentication to identify users.</p>
-            <p class="text-muted mb-3 small">If you do not have an account, please contact your administrator.</p>
-            <a href="{{ url_for('index') }}" class="btn btn-primary">Continue</a>
-        </div>
+<header class="PageHeader">
+  <div>
+    <h1 class="PageTitle">Sign in</h1>
+    <p class="PageSubtitle">This application uses Windows Authentication (no password prompt).</p>
+  </div>
+</header>
+
+<section class="Card" aria-label="Login">
+  <div class="Card__hd">
+    <h2 class="Card__title">Windows Authentication</h2>
+  </div>
+  <div class="Card__bd">
+    <p style="margin: 0 0 var(--s-3) 0; color: var(--muted);">
+      If you can access this site, your Windows identity will be used automatically.
+    </p>
+    <p style="margin: 0 0 var(--s-5) 0; color: var(--subtle);">
+      If you do not have an account, please contact your administrator.
+    </p>
+    <div class="PageActions">
+      <a class="Button Button--primary" href="{{ url_for('index') }}">Continue</a>
     </div>
-</div>
+  </div>
+</section>
 {% endblock %}

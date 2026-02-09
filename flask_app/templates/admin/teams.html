@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}Teams - Administration - JIT Access{% endblock %}
+
+{% block content %}
+<header class="PageHeader">
+  <div>
+    <h1 class="PageTitle">Teams</h1>
+    <p class="PageSubtitle">Team catalog (read-only).</p>
+  </div>
+  <div class="PageActions">
+    <a class="Button" href="{{ url_for('admin_dashboard') }}">Back</a>
+  </div>
+</header>
+
+<section class="Card" aria-label="Teams">
+  <div class="Card__hd">
+    <h2 class="Card__title">Active Teams</h2>
+  </div>
+  <div class="Card__bd">
+    {% if teams %}
+      <div class="TableWrap">
+        <table class="Table">
+          <thead>
+            <tr>
+              <th>Team</th>
+              <th>Description</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for team in teams %}
+              <tr>
+                <td><strong>{{ team.TeamName or team.Name or 'N/A' }}</strong></td>
+                <td>{{ team.Description or '—' }}</td>
+                <td>
+                  {% if team.IsActive is defined and team.IsActive is not none and not team.IsActive %}
+                    <span class="Badge">Inactive</span>
+                  {% else %}
+                    <span class="Badge Badge--success">Active</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="EmptyState">
+        <p class="EmptyState__title">No teams found</p>
+        <p>If this is unexpected, check the database connection.</p>
+      </div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}
+

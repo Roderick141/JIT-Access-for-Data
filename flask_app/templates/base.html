@@ -1,50 +1,233 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>{% block title %}JIT Access Framework{% endblock %}</title>
-    <link rel="stylesheet" type="text/css" charset="UTF-8" href="{{ url_for('static', filename='css/darkmode.css') }}">
-    {% block extra_css %}{% endblock %}
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <title>{% block title %}JIT Access Framework{% endblock %}</title>
+
+  <!-- Apply theme as early as possible to prevent flashes -->
+  <script>
+    (function () {
+      try {
+        var stored = localStorage.getItem("jit_theme"); // "light" | "dark"
+        var prefersDark =
+          window.matchMedia &&
+          window.matchMedia("(prefers-color-scheme: dark)").matches;
+        var theme = stored || (prefersDark ? "dark" : "light");
+        document.documentElement.setAttribute("data-theme", theme);
+      } catch (e) {}
+    })();
+  </script>
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}" />
+  <script src="{{ url_for('static', filename='js/theme.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/sidebar.js') }}" defer></script>
+
+  {% block extra_head %}{% endblock %}
 </head>
 <body>
-    <nav class="navbar">
-        <a href="{{ url_for('index') }}" class="navbar-brand">JIT Access</a>
-        <ul class="navbar-nav">
-            {% if session.user %}
-                <!-- User Section - All authenticated users see this -->
-                <li><a href="{{ url_for('user_dashboard') }}" class="nav-link {% if request.endpoint == 'user_dashboard' or request.endpoint == 'user_request' or request.endpoint == 'user_history' %}active{% endif %}">My Access</a></li>
-                
-                <!-- Approver Section - Only approvers see this -->
-                {% if session.user.get('IsApprover') %}
-                    <li><a href="{{ url_for('approver_dashboard') }}" class="nav-link {% if 'approver' in request.endpoint %}active{% endif %}">Approvals</a></li>
-                {% endif %}
-                
-                <!-- Admin Section - Only admins see this -->
-                {% if session.user.get('IsAdmin') %}
-                    <li><a href="{{ url_for('admin_dashboard') }}" class="nav-link {% if 'admin' in request.endpoint %}active{% endif %}">Administration</a></li>
-                {% endif %}
-                
-                <li><a href="#" class="nav-link">{{ session.user.get('DisplayName', session.user.get('LoginName', 'User')) }}</a></li>
-            {% else %}
-                <li><a href="{{ url_for('login') }}" class="nav-link">Login</a></li>
-            {% endif %}
-        </ul>
-    </nav>
+  <a class="u-skipLink" href="#main">Skip to content</a>
 
-    <div class="container">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ category }}">{{ message }}</div>
-                {% endfor %}
+  <div class="AppShell">
+    <aside class="Sidebar" aria-label="Application sidebar">
+      <div class="Sidebar__header">
+        <a class="Sidebar__brand" href="{{ url_for('index') }}" aria-label="JIT Access home">
+          <span class="Sidebar__mark" aria-hidden="true"></span>
+          <span class="Sidebar__brandText">JIT Access</span>
+        </a>
+
+        <button type="button" class="Sidebar__collapseBtn" id="sidebar-toggle" aria-label="Toggle sidebar">
+          ⟷
+        </button>
+      </div>
+
+      <nav class="Sidebar__nav" aria-label="Primary navigation">
+        {% block sidebar %}
+          {% if session.user %}
+            <div class="NavGroup">
+              <p class="NavGroup__title">My Access</p>
+              <ul class="NavList">
+                <li>
+                  <a class="NavLink"
+                     href="{{ url_for('user_dashboard') }}"
+                     {% if request.endpoint == 'user_dashboard' %}aria-current="page"{% endif %}>
+                    <svg class="NavLink__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path d="M4 11.5 12 4l8 7.5V20a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1v-8.5Z" stroke="currentColor" stroke-width="1.6" />
+                    </svg>
+                    <span class="NavLink__label">Dashboard</span>
+                  </a>
+                </li>
+                <li>
+                  <a class="NavLink"
+                     href="{{ url_for('user_request') }}"
+                     {% if request.endpoint == 'user_request' %}aria-current="page"{% endif %}>
+                    <svg class="NavLink__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+                    </svg>
+                    <span class="NavLink__label">Request Access</span>
+                  </a>
+                </li>
+                <li>
+                  <a class="NavLink"
+                     href="{{ url_for('user_history') }}"
+                     {% if request.endpoint == 'user_history' %}aria-current="page"{% endif %}>
+                    <svg class="NavLink__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path d="M7 8h10M7 12h10M7 16h7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                      <path d="M6 4h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="1.6" />
+                    </svg>
+                    <span class="NavLink__label">History</span>
+                  </a>
+                </li>
+              </ul>
+            </div>
+
+            {% if session.user.get('IsApprover') %}
+              <div class="NavGroup">
+                <p class="NavGroup__title">Approvals</p>
+                <ul class="NavList">
+                  <li>
+                    <a class="NavLink"
+                       href="{{ url_for('approver_dashboard') }}"
+                       {% if request.endpoint and 'approver' in request.endpoint %}aria-current="page"{% endif %}>
+                      <svg class="NavLink__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+                      </svg>
+                      <span class="NavLink__label">Queue</span>
+                    </a>
+                  </li>
+                </ul>
+              </div>
             {% endif %}
+
+            {% if session.user.get('IsAdmin') %}
+              <div class="NavGroup">
+                <p class="NavGroup__title">Administration</p>
+                <ul class="NavList">
+                  <li>
+                    <a class="NavLink"
+                       href="{{ url_for('admin_dashboard') }}"
+                       {% if request.endpoint == 'admin_dashboard' %}aria-current="page"{% endif %}>
+                      <svg class="NavLink__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M12 2l3 6 7 .8-5 4.5 1.5 6.7L12 17l-6.5 3 1.5-6.7-5-4.5L9 8l3-6Z" stroke="currentColor" stroke-width="1.2" />
+                      </svg>
+                      <span class="NavLink__label">Overview</span>
+                    </a>
+                  </li>
+                  <li>
+                    <a class="NavLink"
+                       href="{{ url_for('admin_roles') }}"
+                       {% if request.endpoint == 'admin_roles' %}aria-current="page"{% endif %}>
+                      <svg class="NavLink__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M7 7h10M7 12h10M7 17h10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                      </svg>
+                      <span class="NavLink__label">Roles</span>
+                    </a>
+                  </li>
+                  <li>
+                    <a class="NavLink"
+                       href="{{ url_for('admin_teams') }}"
+                       {% if request.endpoint == 'admin_teams' %}aria-current="page"{% endif %}>
+                      <svg class="NavLink__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M16 11a3 3 0 1 0-6 0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                        <path d="M5 20c0-3.3 3.1-6 7-6s7 2.7 7 6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                        <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" stroke="currentColor" stroke-width="1.2" />
+                      </svg>
+                      <span class="NavLink__label">Teams</span>
+                    </a>
+                  </li>
+                  <li>
+                    <a class="NavLink"
+                       href="{{ url_for('admin_eligibility') }}"
+                       {% if request.endpoint == 'admin_eligibility' %}aria-current="page"{% endif %}>
+                      <svg class="NavLink__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M5 12h14M12 5v14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                      </svg>
+                      <span class="NavLink__label">Eligibility</span>
+                    </a>
+                  </li>
+                  <li>
+                    <a class="NavLink"
+                       href="{{ url_for('admin_users') }}"
+                       {% if request.endpoint == 'admin_users' %}aria-current="page"{% endif %}>
+                      <svg class="NavLink__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                        <path d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" stroke="currentColor" stroke-width="1.2" />
+                        <path d="M22 21v-2a4 4 0 0 0-3-3.87" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                      </svg>
+                      <span class="NavLink__label">Users</span>
+                    </a>
+                  </li>
+                  <li>
+                    <a class="NavLink"
+                       href="{{ url_for('admin_reports') }}"
+                       {% if request.endpoint == 'admin_reports' %}aria-current="page"{% endif %}>
+                      <svg class="NavLink__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M4 19V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v14" stroke="currentColor" stroke-width="1.4" />
+                        <path d="M7 16V9M12 16V7M17 16v-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                      </svg>
+                      <span class="NavLink__label">Reports</span>
+                    </a>
+                  </li>
+                </ul>
+              </div>
+            {% endif %}
+          {% else %}
+            <div class="NavGroup">
+              <p class="NavGroup__title">Authentication</p>
+              <ul class="NavList">
+                <li>
+                  <a class="NavLink"
+                     href="{{ url_for('login') }}"
+                     {% if request.endpoint == 'login' %}aria-current="page"{% endif %}>
+                    <svg class="NavLink__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path d="M15 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                      <path d="M10 17l5-5-5-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+                      <path d="M15 12h7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                    </svg>
+                    <span class="NavLink__label">Login</span>
+                  </a>
+                </li>
+              </ul>
+            </div>
+          {% endif %}
+        {% endblock %}
+      </nav>
+
+      <div class="Sidebar__footer" aria-label="Sidebar footer">
+        {% if session.user %}
+          <div class="Sidebar__user" title="{{ session.user.get('LoginName', 'User') }}">
+            {{ session.user.get('DisplayName', session.user.get('LoginName', 'User')) }}
+          </div>
+        {% endif %}
+
+        <div class="Sidebar__footerRow">
+          <button type="button" class="ThemeToggle" id="theme-toggle" aria-label="Toggle theme">
+            <span aria-hidden="true">◐</span>
+            <span class="ThemeToggle__label" data-theme-label>Theme</span>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <main class="Main" id="main" tabindex="-1">
+      <div class="Main__inner">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <div class="AlertList" aria-label="Notifications">
+              {% for category, message in messages %}
+                <div class="Alert Alert--{{ category }}">{{ message }}</div>
+              {% endfor %}
+            </div>
+          {% endif %}
         {% endwith %}
 
         {% block content %}{% endblock %}
-    </div>
+      </div>
+    </main>
+  </div>
 
-    {% block extra_js %}{% endblock %}
+  {% block extra_js %}{% endblock %}
 </body>
 </html>

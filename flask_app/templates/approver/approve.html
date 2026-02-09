@@ -3,97 +3,108 @@
 {% block title %}Review Request - JIT Access{% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <h1 class="page-title">Review Request</h1>
-    <p class="page-subtitle">Review request details and approve or deny</p>
-</div>
+<header class="PageHeader">
+  <div>
+    <h1 class="PageTitle">Review Request</h1>
+    <p class="PageSubtitle">Approve or deny the request after reviewing details.</p>
+  </div>
+  <div class="PageActions">
+    <a class="Button" href="{{ url_for('approver_dashboard') }}">Back to Queue</a>
+  </div>
+</header>
 
-<div class="card">
-    <div class="card-header">Request Details</div>
-    <div class="card-body">
-        <table class="table">
+<section class="Card" aria-label="Request details">
+  <div class="Card__hd">
+    <h2 class="Card__title">Details</h2>
+  </div>
+  <div class="Card__bd">
+    <div class="TableWrap">
+      <table class="Table">
+        <tbody>
+          <tr>
+            <th>Requester</th>
+            <td><strong>{{ request_data.RequesterName or request_data.RequesterLoginName or 'N/A' }}</strong></td>
+          </tr>
+          <tr>
+            <th>Department</th>
+            <td>{{ request_data.RequesterDepartment or request_data.UserDeptSnapshot or 'N/A' }}</td>
+          </tr>
+          <tr>
+            <th>Title</th>
+            <td>{{ request_data.UserTitleSnapshot or 'N/A' }}</td>
+          </tr>
+          <tr>
+            <th>Duration</th>
+            <td>{% set days = request_data.RequestedDurationMinutes | minutes_to_days %}{{ days }} day{% if days != 1 %}s{% endif %}</td>
+          </tr>
+          <tr>
+            <th>Requested</th>
+            <td>{{ request_data.CreatedUtc.strftime('%Y-%m-%d %H:%M') if request_data.CreatedUtc else 'N/A' }}</td>
+          </tr>
+          {% if request_data.TicketRef %}
             <tr>
-                <th>Requester:</th>
-                <td>{{ request_data.RequesterName or request_data.RequesterLoginName or 'N/A' }}</td>
+              <th>Ticket / Reference</th>
+              <td><code style="font-family: var(--font-mono);">{{ request_data.TicketRef }}</code></td>
             </tr>
-            <tr>
-                <th>Requested Roles:</th>
-                <td>
-                    {% if request_data.Roles and request_data.Roles|length > 0 %}
-                        {% if request_data.Roles|length == 1 %}
-                            <strong>{{ request_data.Roles[0].RoleName }}</strong>
-                            {% if request_data.Roles[0].Description %}
-                                <br><small class="text-muted">{{ request_data.Roles[0].Description }}</small>
-                            {% endif %}
-                        {% else %}
-                            <ul style="margin: 0; padding-left: 1.5rem;">
-                                {% for role in request_data.Roles %}
-                                <li>
-                                    <strong>{{ role.RoleName }}</strong>
-                                    {% if role.Description %}
-                                        <br><small class="text-muted">{{ role.Description }}</small>
-                                    {% endif %}
-                                    <br><small class="text-muted">
-                                        Max Duration: {{ (role.MaxDurationMinutes / 1440) | int }} day{% if (role.MaxDurationMinutes / 1440) | int != 1 %}s{% endif %}
-                                        {% if role.RequiresTicket %} | Requires Ticket{% endif %}
-                                    </small>
-                                </li>
-                                {% endfor %}
-                            </ul>
-                        {% endif %}
-                    {% else %}
-                        N/A
-                    {% endif %}
-                </td>
-            </tr>
-            <tr>
-                <th>Department:</th>
-                <td>{{ request_data.RequesterDepartment or request_data.UserDeptSnapshot or 'N/A' }}</td>
-            </tr>
-            <tr>
-                <th>Title:</th>
-                <td>{{ request_data.UserTitleSnapshot or 'N/A' }}</td>
-            </tr>
-            <tr>
-                <th>Duration:</th>
-                <td>{% set days = request_data.RequestedDurationMinutes | minutes_to_days %}{{ days }} day{% if days != 1 %}s{% endif %}</td>
-            </tr>
-            <tr>
-                <th>Justification:</th>
-                <td>{{ request_data.Justification or 'N/A' }}</td>
-            </tr>
-            {% if request_data.TicketRef %}
-            <tr>
-                <th>Ticket/Reference:</th>
-                <td>{{ request_data.TicketRef }}</td>
-            </tr>
-            {% endif %}
-            <tr>
-                <th>Requested:</th>
-                <td>{{ request_data.CreatedUtc.strftime('%Y-%m-%d %H:%M') if request_data.CreatedUtc else 'N/A' }}</td>
-            </tr>
-        </table>
+          {% endif %}
+          <tr>
+            <th>Justification</th>
+            <td>{{ request_data.Justification or 'N/A' }}</td>
+          </tr>
+          <tr>
+            <th>Roles</th>
+            <td>
+              {% if request_data.Roles and request_data.Roles|length > 0 %}
+                <ul style="margin: 0; padding-left: 1.1rem;">
+                  {% for role in request_data.Roles %}
+                    <li style="margin-bottom: 6px;">
+                      <strong>{{ role.RoleName }}</strong>
+                      {% if role.RequiresTicket %}
+                        <span class="Badge Badge--warning" style="margin-left: 8px;">Ticket required</span>
+                      {% endif %}
+                      {% if role.Description %}
+                        <div class="Help">{{ role.Description }}</div>
+                      {% endif %}
+                      <div class="Help">
+                        Max duration:
+                        {{ (role.MaxDurationMinutes / 1440) | int }} day{% if (role.MaxDurationMinutes / 1440) | int != 1 %}s{% endif %}
+                      </div>
+                    </li>
+                  {% endfor %}
+                </ul>
+              {% else %}
+                N/A
+              {% endif %}
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
-</div>
+  </div>
+</section>
 
-<div class="card">
-    <div class="card-header">Approve or Deny</div>
-    <div class="card-body">
-        <form method="POST" id="decisionForm">
-            <div class="form-group">
-                <label class="form-label" for="decision_comment">Comment (optional)</label>
-                <textarea class="form-control" id="decision_comment" name="comment" rows="3" placeholder="Add a comment explaining your decision..."></textarea>
-            </div>
-            <div class="d-flex gap-2">
-                <button type="submit" class="btn btn-primary" onclick="event.preventDefault(); document.getElementById('decisionForm').action='{{ url_for('approver_approve', request_id=request_data.RequestId) }}'; document.getElementById('decisionForm').submit();">Approve</button>
-                <button type="submit" class="btn btn-danger" onclick="event.preventDefault(); document.getElementById('decisionForm').action='{{ url_for('approver_deny', request_id=request_data.RequestId) }}'; document.getElementById('decisionForm').submit();">Deny</button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<div class="mt-2">
-    <a href="{{ url_for('approver_dashboard') }}" class="btn btn-secondary">Back to Approvals</a>
-</div>
+<section class="Card" aria-label="Decision">
+  <div class="Card__hd">
+    <h2 class="Card__title">Decision</h2>
+  </div>
+  <div class="Card__bd">
+    <form class="Form" method="POST" id="decisionForm">
+      <div class="Field">
+        <label class="Label" for="decision_comment">Comment (optional)</label>
+        <textarea class="Textarea" id="decision_comment" name="comment" rows="3" placeholder="Add context for the requester and audit trail..."></textarea>
+      </div>
+      <div class="u-row u-row--wrap">
+        <button type="submit" class="Button Button--primary"
+                onclick="event.preventDefault(); this.form.action='{{ url_for('approver_approve', request_id=request_data.RequestId) }}'; this.form.submit();">
+          Approve
+        </button>
+        <button type="submit" class="Button Button--danger"
+                onclick="event.preventDefault(); this.form.action='{{ url_for('approver_deny', request_id=request_data.RequestId) }}'; this.form.submit();">
+          Deny
+        </button>
+      </div>
+    </form>
+  </div>
+</section>
 {% endblock %}
 

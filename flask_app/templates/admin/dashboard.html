@@ -3,64 +3,25 @@
 {% block title %}Administration - JIT Access{% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <h1 class="page-title">Administration</h1>
-    <p class="page-subtitle">Manage the JIT Access Framework</p>
-</div>
+<header class="PageHeader">
+  <div>
+    <h1 class="PageTitle">Administration</h1>
+    <p class="PageSubtitle">Manage catalog data, eligibility rules, and audit reports.</p>
+  </div>
+</header>
 
-<!-- Navigation Menu for Admin Section -->
-<div class="card" style="margin-bottom: 1.5rem;">
-    <div class="card-body">
-        <div class="d-flex gap-2" style="flex-wrap: wrap;">
-            <a href="{{ url_for('admin_dashboard') }}" class="btn {% if request.endpoint == 'admin_dashboard' %}btn-primary{% else %}btn-secondary{% endif %}">Overview</a>
-            <a href="{{ url_for('admin_roles') }}" class="btn {% if request.endpoint == 'admin_roles' %}btn-primary{% else %}btn-secondary{% endif %}">Roles</a>
-            <a href="{{ url_for('admin_teams') }}" class="btn {% if request.endpoint == 'admin_teams' %}btn-primary{% else %}btn-secondary{% endif %}">Teams</a>
-            <a href="{{ url_for('admin_eligibility') }}" class="btn {% if request.endpoint == 'admin_eligibility' %}btn-primary{% else %}btn-secondary{% endif %}">Eligibility</a>
-            <a href="{{ url_for('admin_users') }}" class="btn {% if request.endpoint == 'admin_users' %}btn-primary{% else %}btn-secondary{% endif %}">Users</a>
-            <a href="{{ url_for('admin_reports') }}" class="btn {% if request.endpoint == 'admin_reports' %}btn-primary{% else %}btn-secondary{% endif %}">Reports</a>
-        </div>
+<section class="Card" aria-label="Admin shortcuts">
+  <div class="Card__hd">
+    <h2 class="Card__title">Shortcuts</h2>
+  </div>
+  <div class="Card__bd">
+    <div class="u-row u-row--wrap">
+      <a class="Button Button--primary" href="{{ url_for('admin_roles') }}">Roles</a>
+      <a class="Button" href="{{ url_for('admin_teams') }}">Teams</a>
+      <a class="Button" href="{{ url_for('admin_eligibility') }}">Eligibility</a>
+      <a class="Button" href="{{ url_for('admin_users') }}">Users</a>
+      <a class="Button" href="{{ url_for('admin_reports') }}">Reports</a>
     </div>
-</div>
-
-<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
-    <div class="card">
-        <div class="card-header">Roles</div>
-        <div class="card-body">
-            <p class="text-muted">Manage role catalog and permissions</p>
-            <a href="{{ url_for('admin_roles') }}" class="btn btn-primary">Manage Roles</a>
-        </div>
-    </div>
-
-    <div class="card">
-        <div class="card-header">Teams</div>
-        <div class="card-body">
-            <p class="text-muted">Manage teams and team membership</p>
-            <a href="{{ url_for('admin_teams') }}" class="btn btn-primary">Manage Teams</a>
-        </div>
-    </div>
-
-    <div class="card">
-        <div class="card-header">Eligibility Rules</div>
-        <div class="card-body">
-            <p class="text-muted">Configure who can request which roles</p>
-            <a href="{{ url_for('admin_eligibility') }}" class="btn btn-primary">Manage Eligibility</a>
-        </div>
-    </div>
-
-    <div class="card">
-        <div class="card-header">Users</div>
-        <div class="card-body">
-            <p class="text-muted">View and manage user accounts</p>
-            <a href="{{ url_for('admin_users') }}" class="btn btn-primary">View Users</a>
-        </div>
-    </div>
-
-    <div class="card">
-        <div class="card-header">Reports</div>
-        <div class="card-body">
-            <p class="text-muted">Audit logs and system reports</p>
-            <a href="{{ url_for('admin_reports') }}" class="btn btn-primary">View Reports</a>
-        </div>
-    </div>
-</div>
+  </div>
+</section>
 {% endblock %}

@@ -3,310 +3,149 @@
 {% block title %}Request Access - JIT Access{% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <h1 class="page-title">Request Access</h1>
-    <p class="page-subtitle">Select one or more roles to request access</p>
-</div>
+<header class="PageHeader">
+  <div>
+    <h1 class="PageTitle">Request Access</h1>
+    <p class="PageSubtitle">Select one or more roles, choose the duration, and provide a justification.</p>
+  </div>
+  <div class="PageActions">
+    <a class="Button Button--ghost" href="{{ url_for('user_dashboard') }}">Back</a>
+  </div>
+</header>
 
-<div class="card">
-    <div class="card-body">
-        <form method="POST" action="{{ url_for('user_request') }}" id="requestForm">
-            <div class="form-group">
-                <label class="form-label">Select Roles <span class="text-muted">(select at least one)</span></label>
-                
-                {% if roles %}
-                <div id="roles-container" class="roles-table-container">
-                    <table class="roles-table">
-                        <thead>
-                            <tr>
-                                <th class="col-checkbox"></th>
-                                <th class="col-name">Role Name</th>
-                                <th class="col-description">Description</th>
-                                <th class="col-duration">Max Duration</th>
-                                <th class="col-ticket">Ticket</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for role in roles %}
-                            <tr class="role-table-row" data-role-id="{{ role.RoleId }}">
-                                <td class="col-checkbox">
-                                    <input type="checkbox" 
-                                           name="role_id" 
-                                           value="{{ role.RoleId }}"
-                                           class="role-checkbox"
-                                           data-max-duration="{{ role.MaxDurationMinutes }}"
-                                           data-requires-ticket="{{ '1' if role.RequiresTicket else '0' }}"
-                                           data-ticket-regex="{{ role.TicketRegex or '' }}"
-                                           data-role-name="{{ role.RoleName }}"
-                                           id="role_{{ role.RoleId }}">
-                                </td>
-                                <td class="col-name">
-                                    <label for="role_{{ role.RoleId }}" class="role-name-label">
-                                        {{ role.RoleName }}
-                                    </label>
-                                </td>
-                                <td class="col-description">
-                                    <span class="role-description">{{ role.Description or '—' }}</span>
-                                </td>
-                                <td class="col-duration">
-                                    <span class="role-duration">{{ (role.MaxDurationMinutes / 1440) | int }} day{% if (role.MaxDurationMinutes / 1440) | int != 1 %}s{% endif %}</span>
-                                </td>
-                                <td class="col-ticket">
-                                    {% if role.RequiresTicket %}
-                                    <span class="ticket-badge ticket-required">Required</span>
-                                    {% else %}
-                                    <span class="ticket-badge ticket-optional">Optional</span>
-                                    {% endif %}
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-                <div id="selected-count" class="text-muted mt-2" style="display: none;">
-                    <strong><span id="selected-count-number">0</span> role(s) selected</strong>
-                </div>
-                {% else %}
-                <div class="alert alert-info">
-                    No roles available for request. You may already have access to all available roles or are not eligible for any roles.
-                </div>
-                {% endif %}
-            </div>
+<section class="Card" aria-label="Request form">
+  <div class="Card__hd">
+    <h2 class="Card__title">Request Details</h2>
+  </div>
+  <div class="Card__bd">
+    <form class="Form" method="POST" action="{{ url_for('user_request') }}" id="requestForm">
+      <div class="Field">
+        <label class="Label" for="roles-container">Select roles <span class="Help">(select at least one)</span></label>
 
-            <div class="form-group">
-                <label class="form-label" for="duration_days">Duration (days)</label>
-                <input type="number" 
-                       class="form-control" 
-                       id="duration_days" 
-                       name="duration_days" 
-                       min="1" 
-                       step="1"
-                       required
-                       placeholder="Enter duration in days">
-                <small class="text-muted" id="duration_help">Select one or more roles to see maximum duration</small>
-            </div>
+        {% if roles %}
+          <div id="roles-container" class="TableWrap" tabindex="0" aria-label="Available roles">
+            <table class="Table" style="margin: 0;">
+              <thead>
+                <tr>
+                  <th style="width: 56px;"></th>
+                  <th>Role</th>
+                  <th>Description</th>
+                  <th style="width: 160px;">Max Duration</th>
+                  <th style="width: 140px;">Ticket</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for role in roles %}
+                  <tr class="RoleRow" data-role-id="{{ role.RoleId }}">
+                    <td>
+                      <input
+                        type="checkbox"
+                        name="role_id"
+                        value="{{ role.RoleId }}"
+                        class="RoleCheck"
+                        data-max-duration="{{ role.MaxDurationMinutes }}"
+                        data-requires-ticket="{{ '1' if role.RequiresTicket else '0' }}"
+                        data-ticket-regex="{{ role.TicketRegex or '' }}"
+                        data-role-name="{{ role.RoleName }}"
+                        id="role_{{ role.RoleId }}"
+                        aria-label="Select {{ role.RoleName }}"
+                      />
+                    </td>
+                    <td>
+                      <label for="role_{{ role.RoleId }}" style="cursor: pointer;">
+                        <strong>{{ role.RoleName }}</strong>
+                      </label>
+                    </td>
+                    <td>{{ role.Description or '—' }}</td>
+                    <td>
+                      {{ (role.MaxDurationMinutes / 1440) | int }} day{% if (role.MaxDurationMinutes / 1440) | int != 1 %}s{% endif %}
+                    </td>
+                    <td>
+                      {% if role.RequiresTicket %}
+                        <span class="Badge Badge--warning">Required</span>
+                      {% else %}
+                        <span class="Badge">Optional</span>
+                      {% endif %}
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
 
-            <div class="form-group">
-                <label class="form-label" for="justification">Justification</label>
-                <textarea class="form-control" 
-                          id="justification" 
-                          name="justification" 
-                          rows="4" 
-                          required
-                          placeholder="Explain why you need this access..."></textarea>
-            </div>
+          <div class="Help" id="roleSelectionMeta" style="display: none;">
+            <strong><span id="selectedCount">0</span> role(s) selected</strong>
+          </div>
+        {% else %}
+          <div class="EmptyState">
+            <p class="EmptyState__title">No roles available</p>
+            <p>You may already have access to all available roles, or you are not eligible for any roles.</p>
+          </div>
+        {% endif %}
+      </div>
 
-            <div class="form-group">
-                <label class="form-label" for="ticket_ref" id="ticket_label">Ticket/Reference <span id="ticket_required_indicator" class="text-muted">(optional)</span></label>
-                <input type="text" 
-                       class="form-control" 
-                       id="ticket_ref" 
-                       name="ticket_ref"
-                       placeholder="Ticket number or reference">
-                <small class="text-muted" id="ticket_help" style="display: none;"></small>
-            </div>
+      <div class="Field">
+        <label class="Label" for="duration_days">Duration (days)</label>
+        <input
+          class="Input"
+          type="number"
+          id="duration_days"
+          name="duration_days"
+          min="1"
+          step="1"
+          required
+          placeholder="e.g., 3"
+        />
+        <div class="Help" id="duration_help">Select one or more roles to see maximum duration.</div>
+      </div>
 
-            <div class="d-flex gap-2">
-                <button type="submit" class="btn btn-primary">Submit Request</button>
-                <a href="{{ url_for('user_dashboard') }}" class="btn btn-secondary">Cancel</a>
-            </div>
-        </form>
-    </div>
-</div>
-{% endblock %}
+      <div class="Field">
+        <label class="Label" for="justification">Justification</label>
+        <textarea
+          class="Textarea"
+          id="justification"
+          name="justification"
+          rows="4"
+          required
+          placeholder="Explain why you need this access..."
+        ></textarea>
+        <div class="Help">Be specific: system, task, and urgency.</div>
+      </div>
 
-{% block extra_css %}
-<style>
-.roles-table-container {
-    max-height: 500px;
-    overflow-y: auto;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    background: var(--bg-secondary);
-    margin-bottom: 1rem;
-}
+      <div class="Field">
+        <label class="Label" for="ticket_ref" id="ticket_label">
+          Ticket / Reference <span id="ticket_required_indicator" class="Help">(optional)</span>
+        </label>
+        <input
+          class="Input"
+          type="text"
+          id="ticket_ref"
+          name="ticket_ref"
+          placeholder="e.g., INC123456"
+        />
+        <div class="Help" id="ticket_help" style="display: none;"></div>
+      </div>
 
-.roles-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.9rem;
-}
-
-.roles-table thead {
-    position: sticky;
-    top: 0;
-    background: var(--bg-tertiary);
-    z-index: 10;
-    border-bottom: 2px solid var(--border);
-}
-
-.roles-table thead th {
-    padding: 0.75rem 1rem;
-    text-align: left;
-    font-weight: 600;
-    color: var(--text-primary);
-    font-size: 0.85rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.roles-table tbody tr {
-    border-bottom: 1px solid var(--border);
-    transition: background-color 0.15s ease;
-}
-
-.roles-table tbody tr:hover {
-    background: var(--bg-tertiary);
-}
-
-.roles-table tbody tr:last-child {
-    border-bottom: none;
-}
-
-.roles-table tbody tr.role-selected {
-    background: rgba(35, 134, 54, 0.1);
-}
-
-.roles-table tbody tr.role-selected:hover {
-    background: rgba(35, 134, 54, 0.15);
-}
-
-.roles-table td {
-    padding: 0.875rem 1rem;
-    vertical-align: middle;
-    color: var(--text-primary);
-}
-
-.col-checkbox {
-    width: 40px;
-    text-align: center;
-}
-
-.col-name {
-    width: 20%;
-    font-weight: 600;
-}
-
-.col-description {
-    width: 35%;
-    color: var(--text-secondary);
-}
-
-.col-duration {
-    width: 15%;
-    color: var(--text-secondary);
-    font-size: 0.9rem;
-}
-
-.col-ticket {
-    width: 15%;
-}
-
-.role-checkbox {
-    width: 18px;
-    height: 18px;
-    cursor: pointer;
-    accent-color: var(--primary);
-}
-
-.role-name-label {
-    cursor: pointer;
-    display: block;
-    color: var(--text-primary);
-    font-weight: 600;
-    transition: color 0.2s;
-}
-
-.role-table-row.role-selected .role-name-label {
-    color: var(--primary);
-}
-
-.role-description {
-    display: block;
-    color: var(--text-secondary);
-    font-size: 0.9rem;
-    line-height: 1.4;
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.role-duration {
-    color: var(--text-secondary);
-    font-size: 0.9rem;
-}
-
-.ticket-badge {
-    display: inline-block;
-    padding: 0.25rem 0.5rem;
-    border-radius: 4px;
-    font-size: 0.8rem;
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
-}
-
-.ticket-required {
-    background: rgba(218, 54, 51, 0.15);
-    color: var(--danger);
-    border: 1px solid rgba(218, 54, 51, 0.3);
-}
-
-.ticket-optional {
-    background: rgba(139, 148, 158, 0.1);
-    color: var(--text-secondary);
-    border: 1px solid rgba(139, 148, 158, 0.2);
-}
-
-/* Scrollbar styling for roles container */
-.roles-table-container::-webkit-scrollbar {
-    width: 8px;
-}
-
-.roles-table-container::-webkit-scrollbar-track {
-    background: var(--bg-secondary);
-}
-
-.roles-table-container::-webkit-scrollbar-thumb {
-    background: var(--border);
-    border-radius: 4px;
-}
-
-.roles-table-container::-webkit-scrollbar-thumb:hover {
-    background: var(--text-muted);
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-    .roles-table {
-        font-size: 0.85rem;
-    }
-    
-    .roles-table thead th,
-    .roles-table td {
-        padding: 0.5rem 0.75rem;
-    }
-    
-    .col-description {
-        max-width: 200px;
-    }
-}
-</style>
+      <div class="u-row u-row--wrap">
+        <button type="submit" class="Button Button--primary">Submit Request</button>
+        <a class="Button" href="{{ url_for('user_dashboard') }}">Cancel</a>
+      </div>
+    </form>
+  </div>
+</section>
 {% endblock %}
 
 {% block extra_js %}
 <script>
 (function() {
-    const roleCheckboxes = document.querySelectorAll('.role-checkbox');
+    const roleChecks = document.querySelectorAll('.RoleCheck');
     const durationInput = document.getElementById('duration_days');
     const durationHelp = document.getElementById('duration_help');
     const ticketInput = document.getElementById('ticket_ref');
-    const ticketLabel = document.getElementById('ticket_label');
     const ticketHelp = document.getElementById('ticket_help');
     const ticketRequiredIndicator = document.getElementById('ticket_required_indicator');
-    const selectedCount = document.getElementById('selected-count');
-    const selectedCountNumber = document.getElementById('selected-count-number');
+    const meta = document.getElementById('roleSelectionMeta');
+    const selectedCount = document.getElementById('selectedCount');
     const requestForm = document.getElementById('requestForm');
     
     // Convert minutes to days (rounding down)
@@ -317,7 +156,7 @@
     // Get all selected roles' data
     function getSelectedRoles() {
         const selected = [];
-        roleCheckboxes.forEach(checkbox => {
+        roleChecks.forEach(checkbox => {
             if (checkbox.checked) {
                 selected.push({
                     roleId: checkbox.value,
@@ -336,12 +175,13 @@
         const selected = getSelectedRoles();
         const selectedCountValue = selected.length;
         
-        // Update selected count
-        if (selectedCountValue > 0) {
-            selectedCount.style.display = 'block';
-            selectedCountNumber.textContent = selectedCountValue;
-        } else {
-            selectedCount.style.display = 'none';
+        if (meta && selectedCount) {
+          if (selectedCountValue > 0) {
+              meta.style.display = 'block';
+              selectedCount.textContent = String(selectedCountValue);
+          } else {
+              meta.style.display = 'none';
+          }
         }
         
         // Update duration field
@@ -351,7 +191,7 @@
             durationInput.value = '';
             ticketInput.removeAttribute('required');
             ticketRequiredIndicator.textContent = '(optional)';
-            ticketRequiredIndicator.className = 'text-muted';
+            ticketRequiredIndicator.className = 'Help';
             ticketHelp.style.display = 'none';
             ticketInput.value = '';
             return;
@@ -379,7 +219,7 @@
         if (anyRequiresTicket) {
             ticketInput.setAttribute('required', 'required');
             ticketRequiredIndicator.textContent = '(required)';
-            ticketRequiredIndicator.className = 'text-danger';
+            ticketRequiredIndicator.className = 'Help';
             ticketInput.placeholder = 'Ticket number or reference (required)';
             
             // Collect all ticket regexes from roles that require tickets
@@ -398,22 +238,17 @@
         } else {
             ticketInput.removeAttribute('required');
             ticketRequiredIndicator.textContent = '(optional)';
-            ticketRequiredIndicator.className = 'text-muted';
+            ticketRequiredIndicator.className = 'Help';
             ticketInput.placeholder = 'Ticket number or reference';
             ticketHelp.style.display = 'none';
         }
     }
     
     // Add event listeners to all checkboxes
-    roleCheckboxes.forEach(checkbox => {
+    roleChecks.forEach(checkbox => {
         checkbox.addEventListener('change', function() {
-            // Toggle selected class on table row
-            const row = this.closest('.role-table-row');
-            if (this.checked) {
-                row.classList.add('role-selected');
-            } else {
-                row.classList.remove('role-selected');
-            }
+            const row = this.closest('.RoleRow');
+            if (row) row.style.background = this.checked ? 'rgba(30, 102, 245, 0.08)' : '';
             updateFormForSelectedRoles();
         });
     });
@@ -460,12 +295,9 @@
     });
     
     // Initialize form state on page load
-    roleCheckboxes.forEach(checkbox => {
-        // Set initial selected state on rows
-        const row = checkbox.closest('.role-table-row');
-        if (checkbox.checked) {
-            row.classList.add('role-selected');
-        }
+    roleChecks.forEach(checkbox => {
+        const row = checkbox.closest('.RoleRow');
+        if (row && checkbox.checked) row.style.background = 'rgba(30, 102, 245, 0.08)';
     });
     updateFormForSelectedRoles();
 })();

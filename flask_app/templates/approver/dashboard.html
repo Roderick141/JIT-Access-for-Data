@@ -3,65 +3,61 @@
 {% block title %}Approvals - JIT Access{% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <h1 class="page-title">Pending Approvals</h1>
-    <p class="page-subtitle">Review and approve access requests</p>
-</div>
+<header class="PageHeader">
+  <div>
+    <h1 class="PageTitle">Approvals</h1>
+    <p class="PageSubtitle">Requests awaiting your review.</p>
+  </div>
+</header>
 
-<!-- Navigation Menu for Approver Section -->
-<div class="card" style="margin-bottom: 1.5rem;">
-    <div class="card-body">
-        <div class="d-flex gap-2" style="flex-wrap: wrap;">
-            <a href="{{ url_for('approver_dashboard') }}" class="btn {% if request.endpoint == 'approver_dashboard' %}btn-primary{% else %}btn-secondary{% endif %}">Pending Approvals</a>
-        </div>
-    </div>
-</div>
-
-<div class="card">
-    <div class="card-body">
-        {% if requests %}
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Requester</th>
-                    <th>Department</th>
-                    <th>Roles</th>
-                    <th>Duration</th>
-                    <th>Justification</th>
-                    <th>Requested</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for req in requests %}
-                <tr>
-                    <td>{{ req.RequesterName or 'N/A' }}</td>
-                    <td>{{ req.RequesterDepartment or req.UserDeptSnapshot or 'N/A' }}</td>
-                    <td>
-                        {% if req.RoleCount and req.RoleCount > 1 %}
-                            <strong>{{ req.RoleCount }} roles:</strong> {{ req.RoleNames or 'N/A' }}
-                        {% else %}
-                            {{ req.RoleNames or req.RoleName or 'N/A' }}
-                        {% endif %}
-                    </td>
-                    <td>{% set days = req.RequestedDurationMinutes | minutes_to_days %}{{ days }} day{% if days != 1 %}s{% endif %}</td>
-                    <td>{{ req.Justification[:50] + '...' if req.Justification and req.Justification|length > 50 else (req.Justification or 'N/A') }}</td>
-                    <td>{{ req.CreatedUtc.strftime('%Y-%m-%d %H:%M') if req.CreatedUtc else 'N/A' }}</td>
-                    <td>
-                        <div class="d-flex gap-1">
-                            <a href="{{ url_for('approver_request_detail', request_id=req.RequestId) }}" class="btn btn-primary">Review</a>
-                        </div>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
+<section class="Card" aria-label="Pending approvals">
+  <div class="Card__hd">
+    <h2 class="Card__title">Queue</h2>
+  </div>
+  <div class="Card__bd">
+    {% if requests %}
+      <div class="TableWrap">
+        <table class="Table">
+          <thead>
+            <tr>
+              <th>Requester</th>
+              <th>Department</th>
+              <th>Roles</th>
+              <th>Duration</th>
+              <th>Justification</th>
+              <th>Requested</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for req in requests %}
+              <tr>
+                <td><strong>{{ req.RequesterName or 'N/A' }}</strong></td>
+                <td>{{ req.RequesterDepartment or req.UserDeptSnapshot or 'N/A' }}</td>
+                <td>
+                  {% if req.RoleCount and req.RoleCount > 1 %}
+                    <strong>{{ req.RoleCount }} roles:</strong> {{ req.RoleNames or 'N/A' }}
+                  {% else %}
+                    <strong>{{ req.RoleNames or req.RoleName or 'N/A' }}</strong>
+                  {% endif %}
+                </td>
+                <td>{% set days = req.RequestedDurationMinutes | minutes_to_days %}{{ days }} day{% if days != 1 %}s{% endif %}</td>
+                <td>{{ req.Justification[:60] + '…' if req.Justification and req.Justification|length > 60 else (req.Justification or 'N/A') }}</td>
+                <td>{{ req.CreatedUtc.strftime('%Y-%m-%d %H:%M') if req.CreatedUtc else 'N/A' }}</td>
+                <td>
+                  <a class="Button Button--primary" href="{{ url_for('approver_request_detail', request_id=req.RequestId) }}">Review</a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
         </table>
-        {% else %}
-        <div class="empty-state">
-            <div class="empty-state-icon">✓</div>
-            <p>No pending approvals</p>
-        </div>
-        {% endif %}
-    </div>
-</div>
+      </div>
+    {% else %}
+      <div class="EmptyState">
+        <p class="EmptyState__title">No pending approvals</p>
+        <p>You’re all caught up.</p>
+      </div>
+    {% endif %}
+  </div>
+</section>
 {% endblock %}

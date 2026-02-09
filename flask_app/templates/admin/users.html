@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Users - Administration - JIT Access{% endblock %}
+
+{% block content %}
+<header class="PageHeader">
+  <div>
+    <h1 class="PageTitle">Users</h1>
+    <p class="PageSubtitle">Directory inventory (read-only).</p>
+  </div>
+  <div class="PageActions">
+    <a class="Button" href="{{ url_for('admin_dashboard') }}">Back</a>
+  </div>
+</header>
+
+<section class="Card" aria-label="User inventory">
+  <div class="Card__hd">
+    <h2 class="Card__title">Inventory</h2>
+  </div>
+  <div class="Card__bd">
+    {% if users %}
+      <div class="TableWrap">
+        <table class="Table">
+          <thead>
+            <tr>
+              <th>Login</th>
+              <th>Display Name</th>
+              <th>Department</th>
+              <th>Division</th>
+              <th>Seniority</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for u in users %}
+              <tr>
+                <td><strong>{{ u.LoginName or u.UserName or 'N/A' }}</strong></td>
+                <td>{{ u.DisplayName or '—' }}</td>
+                <td>{{ u.Department or '—' }}</td>
+                <td>{{ u.Division or '—' }}</td>
+                <td>{{ u.SeniorityLevel or '—' }}</td>
+                <td>
+                  {% if u.IsActive is defined and u.IsActive is not none and not u.IsActive %}
+                    <span class="Badge">Inactive</span>
+                  {% else %}
+                    <span class="Badge Badge--success">Active</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="EmptyState">
+        <p class="EmptyState__title">No users found</p>
+        <p>If this is unexpected, check the database connection.</p>
+      </div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}
+
