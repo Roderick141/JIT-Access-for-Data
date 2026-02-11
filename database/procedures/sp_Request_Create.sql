@@ -291,8 +291,8 @@ BEGIN
         -- Check if user's seniority meets ALL roles' minimum requirements
         ELSE IF @UserSeniorityLevel IS NOT NULL AND NOT EXISTS (
             SELECT 1 FROM #RoleDetails 
-            WHERE AutoApproveMinSeniority IS NOT NULL 
-            AND (@UserSeniorityLevel < AutoApproveMinSeniority OR AutoApproveMinSeniority IS NULL)
+            WHERE AutoApproveMinSeniority IS NULL
+            OR (@UserSeniorityLevel < AutoApproveMinSeniority)
         )
         BEGIN
             -- All roles have AutoApproveMinSeniority and user meets all
