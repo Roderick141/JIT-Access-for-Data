@@ -226,3 +226,47 @@ Scripts/Activate.ps1
 Scripts/python.exe
 Scripts/pythonw.exe
 Scripts/activate
+
+# Dependencies
+/node_modules
+
+# Build output
+/build
+/dist
+
+# Production
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Editor directories and files
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Testing
+/coverage
+
+# Misc
+*.tgz
+.cache/
+.parcel-cache/
+.next/
+out/
