@@ -227,28 +227,61 @@ Scripts/python.exe
 Scripts/pythonw.exe
 Scripts/activate
 
-# Dependencies
-/node_modules
+# -----------------------------------------------------------------------------
+# Node / Frontend (React, Vite, TypeScript, Tailwind, pnpm)
+# -----------------------------------------------------------------------------
+node_modules/
+.pnpm-store/
+.npm
+.yarn/
+*.tsbuildinfo
+.eslintcache
+.stylelintcache
+
+# Vite build output
+dist/
 
 # Build output
 /build
 /dist
+out/
+.next/
+.parcel-cache/
+.turbo
 
-# Production
-*.log
+# Production / logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+lerna-debug.log*
 
-# Environment variables
+# -----------------------------------------------------------------------------
+# Backend (FastAPI, Python, Uvicorn)
+# -----------------------------------------------------------------------------
+*.pid
+
+# -----------------------------------------------------------------------------
+# Database (SQL Server / T-SQL)
+# -----------------------------------------------------------------------------
+*.bak
+*.mdf
+*.ldf
+
+# -----------------------------------------------------------------------------
+# Environment & secrets (all stacks)
+# -----------------------------------------------------------------------------
 .env
+.env.*
+!.env.example
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
 
-# Editor directories and files
+# -----------------------------------------------------------------------------
+# Editor / OS
+# -----------------------------------------------------------------------------
 .vscode/
 .idea/
 *.suo
@@ -256,17 +289,20 @@ pnpm-debug.log*
 *.njsproj
 *.sln
 *.sw?
-
-# OS-specific files
 .DS_Store
 Thumbs.db
 
-# Testing
+# -----------------------------------------------------------------------------
+# Testing / coverage
+# -----------------------------------------------------------------------------
 /coverage
+coverage/
+.nyc_output/
+playwright-report/
+test-results/
 
+# -----------------------------------------------------------------------------
 # Misc
+# -----------------------------------------------------------------------------
 *.tgz
 .cache/
-.parcel-cache/
-.next/
-out/
