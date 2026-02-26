@@ -27,6 +27,7 @@ BEGIN
     
     DECLARE @GrantId BIGINT;
     DECLARE @UserId NVARCHAR(255);
+    DECLARE @UserContextVersionId BIGINT;
     DECLARE @LoginName NVARCHAR(255);
     DECLARE @DbRoleName NVARCHAR(255);
     DECLARE @DatabaseName NVARCHAR(255);
@@ -37,17 +38,24 @@ BEGIN
     
     -- Find expired active grants
     DECLARE grant_cursor CURSOR FOR
-    SELECT g.GrantId, g.UserId, u.LoginName
+    SELECT g.GrantId, g.UserId, g.UserContextVersionId, u.LoginName
     FROM [jit].[Grants] g
     INNER JOIN [jit].[Users] u ON g.UserId = u.UserId
     WHERE g.Status = 'Active'
     AND g.ValidToUtc < @CurrentUtc;
     
     OPEN grant_cursor;
-    FETCH NEXT FROM grant_cursor INTO @GrantId, @UserId, @LoginName;
+    FETCH NEXT FROM grant_cursor INTO @GrantId, @UserId, @UserContextVersionId, @LoginName;
     
     WHILE @@FETCH_STATUS = 0
     BEGIN
+        IF @UserContextVersionId IS NULL AND @UserId IS NOT NULL
+        BEGIN
+            SELECT @UserContextVersionId = UserContextVersionId
+            FROM [jit].[vw_User_CurrentContext]
+            WHERE UserId = @UserId;
+        END
+
         BEGIN TRY
             BEGIN TRANSACTION;
             
@@ -91,9 +99,40 @@ BEGIN
                     WHERE GrantId = @GrantId AND DbRoleId = @DbRoleId;
                     
                     -- Log error
-                    INSERT INTO [jit].[AuditLog] (EventType, ActorLoginName, TargetUserId, GrantId, DetailsJson)
-                    VALUES ('RoleDropError', @CurrentUser, @UserId, @GrantId,
-                        '{"DatabaseName":"' + @DatabaseName + '","DbRoleName":"' + @DbRoleName + '","Error":"' + REPLACE(@DropError, '"', '""') + '"}');
+                    DECLARE @EscDropDbName NVARCHAR(MAX) = REPLACE(ISNULL(@DatabaseName, ''), '\', '\\');
+                    SET @EscDropDbName = REPLACE(@EscDropDbName, '"', '""');
+                    DECLARE @EscDropDbRole NVARCHAR(MAX) = REPLACE(ISNULL(@DbRoleName, ''), '\', '\\');
+                    SET @EscDropDbRole = REPLACE(@EscDropDbRole, '"', '""');
+                    DECLARE @EscDropError NVARCHAR(MAX) = REPLACE(ISNULL(@DropError, ''), '\', '\\');
+                    SET @EscDropError = REPLACE(@EscDropError, '"', '""');
+                    IF @UserId IS NOT NULL AND @UserContextVersionId IS NOT NULL
+                    BEGIN
+                        INSERT INTO [jit].[AuditLog] (
+                            EventType,
+                            ActorLoginName,
+                            TargetUserId,
+                            TargetUserContextVersionId,
+                            GrantId,
+                            DetailsJson
+                        )
+                        VALUES ('RoleDropError', @CurrentUser, @UserId, @UserContextVersionId, @GrantId,
+                            '{"DatabaseName":"' + @EscDropDbName + '","DbRoleName":"' + @EscDropDbRole + '","Error":"' + @EscDropError + '"}');
+                    END
+                    ELSE
+                    BEGIN
+                        INSERT INTO [jit].[AuditLog] (
+                            EventType,
+                            ActorLoginName,
+                            GrantId,
+                            DetailsJson
+                        )
+                        VALUES (
+                            'RoleDropError',
+                            @CurrentUser,
+                            @GrantId,
+                            '{"DatabaseName":"' + @EscDropDbName + '","DbRoleName":"' + @EscDropDbRole + '","Error":"' + @EscDropError + '","MissingUserContext":true}'
+                        );
+                    END
                 END CATCH
                 
                 FETCH NEXT FROM role_cursor INTO @DatabaseName, @DbRoleName, @DbRoleId;
@@ -108,8 +147,16 @@ BEGIN
             WHERE GrantId = @GrantId;
             
             -- Log audit
-            INSERT INTO [jit].[AuditLog] (EventType, ActorLoginName, TargetUserId, GrantId, DetailsJson)
-            VALUES ('GrantExpired', @CurrentUser, @UserId, @GrantId, '{}');
+            IF @UserId IS NOT NULL AND @UserContextVersionId IS NOT NULL
+            BEGIN
+                INSERT INTO [jit].[AuditLog] (EventType, ActorLoginName, TargetUserId, TargetUserContextVersionId, GrantId, DetailsJson)
+                VALUES ('GrantExpired', @CurrentUser, @UserId, @UserContextVersionId, @GrantId, '{}');
+            END
+            ELSE
+            BEGIN
+                INSERT INTO [jit].[AuditLog] (EventType, ActorLoginName, GrantId, DetailsJson)
+                VALUES ('GrantExpired', @CurrentUser, @GrantId, '{"MissingUserContext":true}');
+            END
             
             SET @ExpiredCount = @ExpiredCount + 1;
             
@@ -121,12 +168,27 @@ BEGIN
                 ROLLBACK TRANSACTION;
             
             -- Log error but continue with next grant
-            INSERT INTO [jit].[AuditLog] (EventType, ActorLoginName, TargetUserId, GrantId, DetailsJson)
-            VALUES ('GrantExpireError', @CurrentUser, @UserId, @GrantId,
-                '{"Error":"' + ERROR_MESSAGE() + '"}');
+            DECLARE @EscGrantExpireError NVARCHAR(MAX) = REPLACE(ISNULL(ERROR_MESSAGE(), ''), '\', '\\');
+            SET @EscGrantExpireError = REPLACE(@EscGrantExpireError, '"', '""');
+            IF @UserId IS NOT NULL AND @UserContextVersionId IS NOT NULL
+            BEGIN
+                INSERT INTO [jit].[AuditLog] (EventType, ActorLoginName, TargetUserId, TargetUserContextVersionId, GrantId, DetailsJson)
+                VALUES ('GrantExpireError', @CurrentUser, @UserId, @UserContextVersionId, @GrantId,
+                    '{"Error":"' + @EscGrantExpireError + '"}');
+            END
+            ELSE
+            BEGIN
+                INSERT INTO [jit].[AuditLog] (EventType, ActorLoginName, GrantId, DetailsJson)
+                VALUES (
+                    'GrantExpireError',
+                    @CurrentUser,
+                    @GrantId,
+                    '{"Error":"' + @EscGrantExpireError + '","MissingUserContext":true}'
+                );
+            END
         END CATCH
         
-        FETCH NEXT FROM grant_cursor INTO @GrantId, @UserId, @LoginName;
+        FETCH NEXT FROM grant_cursor INTO @GrantId, @UserId, @UserContextVersionId, @LoginName;
     END
     
     CLOSE grant_cursor;

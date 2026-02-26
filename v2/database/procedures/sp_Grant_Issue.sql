@@ -18,21 +18,25 @@ GO
 CREATE PROCEDURE [jit].[sp_Grant_Issue]
     @RequestId BIGINT = NULL,
     @UserId NVARCHAR(255),
+    @UserContextVersionId BIGINT = NULL,
     @RoleId INT,
     @ValidFromUtc DATETIME2,
     @ValidToUtc DATETIME2,
     @IssuedByUserId NVARCHAR(255),
+    @IssuedByUserContextVersionId BIGINT = NULL,
     @GrantId BIGINT OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
     
     DECLARE @CurrentUser NVARCHAR(255) = SUSER_SNAME();
+    DECLARE @CurrentUtc DATETIME2 = GETUTCDATE();
     DECLARE @LoginName NVARCHAR(255);
     DECLARE @DbRoleName NVARCHAR(255);
     DECLARE @DatabaseName NVARCHAR(255);
     DECLARE @RoleVersionId BIGINT;
     DECLARE @ConfigSnapshotJson NVARCHAR(MAX);
+    DECLARE @RoleName NVARCHAR(255);
     
     BEGIN TRY
         BEGIN TRANSACTION;
@@ -46,8 +50,37 @@ BEGIN
         BEGIN
             THROW 50003, 'User not found', 1;
         END
+
+        IF @UserContextVersionId IS NULL
+        BEGIN
+            SELECT @UserContextVersionId = UserContextVersionId
+            FROM [jit].[vw_User_CurrentContext]
+            WHERE UserId = @UserId;
+        END
+
+        IF @UserContextVersionId IS NULL
+        BEGIN
+            THROW 50008, 'Target user has no active context version', 1;
+        END
+
+        IF @IssuedByUserContextVersionId IS NULL AND @IssuedByUserId IS NOT NULL
+        BEGIN
+            SELECT @IssuedByUserContextVersionId = UserContextVersionId
+            FROM [jit].[vw_User_CurrentContext]
+            WHERE UserId = @IssuedByUserId;
+        END
+
+        IF @IssuedByUserId IS NOT NULL AND @IssuedByUserContextVersionId IS NULL
+        BEGIN
+            THROW 50009, 'Issuer has no active context version', 1;
+        END
         
         SELECT TOP 1 @RoleVersionId = RoleVersionId
+        FROM [jit].[Roles]
+        WHERE RoleId = @RoleId AND IsActive = 1
+        ORDER BY RoleVersionId DESC;
+
+        SELECT TOP 1 @RoleName = RoleName
         FROM [jit].[Roles]
         WHERE RoleId = @RoleId AND IsActive = 1
         ORDER BY RoleVersionId DESC;
@@ -70,22 +103,25 @@ BEGIN
 
         -- Create grant record
         INSERT INTO [jit].[Grants] (
-            RequestId, UserId, RoleId, RoleVersionId, ConfigSnapshotJson, ValidFromUtc, ValidToUtc,
-            IssuedByUserId, Status
+            RequestId, UserId, UserContextVersionId, RoleId, RoleVersionId, ConfigSnapshotJson, ValidFromUtc, ValidToUtc,
+            IssuedByUserId, IssuedByUserContextVersionId, Status
         )
         VALUES (
-            @RequestId, @UserId, @RoleId, @RoleVersionId, @ConfigSnapshotJson, @ValidFromUtc, @ValidToUtc,
-            @IssuedByUserId, 'Active'
+            @RequestId, @UserId, @UserContextVersionId, @RoleId, @RoleVersionId, @ConfigSnapshotJson, @ValidFromUtc, @ValidToUtc,
+            @IssuedByUserId, @IssuedByUserContextVersionId, 'Active'
         );
         
         SET @GrantId = SCOPE_IDENTITY();
         
         -- Get all DB roles for this business role and add user to each
         DECLARE role_cursor CURSOR FOR
-        SELECT dbr.DatabaseName, dbr.DbRoleName, dbr.DbRoleId
+        SELECT DISTINCT dbr.DatabaseName, dbr.DbRoleName, dbr.DbRoleId
         FROM [jit].[DB_Roles] dbr
         INNER JOIN [jit].[Role_To_DB_Roles] rtdbr ON dbr.DbRoleId = rtdbr.DbRoleId
         WHERE rtdbr.RoleId = @RoleId
+        AND rtdbr.IsActive = 1
+        AND (rtdbr.ValidFromUtc IS NULL OR rtdbr.ValidFromUtc <= @CurrentUtc)
+        AND (rtdbr.ValidToUtc IS NULL OR rtdbr.ValidToUtc >= @CurrentUtc)
         AND dbr.IsJitManaged = 1;
         
         DECLARE @DbRoleId INT;
@@ -105,30 +141,65 @@ BEGIN
                     'ALTER ROLE ' + QUOTENAME(@DbRoleName) + ' ADD MEMBER ' + QUOTENAME(@LoginName);
                 EXEC sp_executesql @Sql;
                 
-                -- Record success
-                INSERT INTO [jit].[Grant_DBRole_Assignments] (
-                    GrantId, DbRoleId, AddAttemptUtc, AddSucceeded
-                )
-                VALUES (
-                    @GrantId, @DbRoleId, GETUTCDATE(), 1
-                );
+                -- Record success (idempotent update/insert)
+                UPDATE [jit].[Grant_DBRole_Assignments]
+                SET AddAttemptUtc = GETUTCDATE(),
+                    AddSucceeded = 1,
+                    AddError = NULL
+                WHERE GrantId = @GrantId
+                  AND DbRoleId = @DbRoleId;
+
+                IF @@ROWCOUNT = 0
+                BEGIN
+                    INSERT INTO [jit].[Grant_DBRole_Assignments] (
+                        GrantId, DbRoleId, AddAttemptUtc, AddSucceeded
+                    )
+                    VALUES (
+                        @GrantId, @DbRoleId, GETUTCDATE(), 1
+                    );
+                END
                 
             END TRY
             BEGIN CATCH
                 SET @AddError = ERROR_MESSAGE();
                 
-                -- Record failure
-                INSERT INTO [jit].[Grant_DBRole_Assignments] (
-                    GrantId, DbRoleId, AddAttemptUtc, AddSucceeded, AddError
-                )
-                VALUES (
-                    @GrantId, @DbRoleId, GETUTCDATE(), 0, @AddError
-                );
+                -- Record failure (idempotent update/insert)
+                UPDATE [jit].[Grant_DBRole_Assignments]
+                SET AddAttemptUtc = GETUTCDATE(),
+                    AddSucceeded = 0,
+                    AddError = @AddError
+                WHERE GrantId = @GrantId
+                  AND DbRoleId = @DbRoleId;
+
+                IF @@ROWCOUNT = 0
+                BEGIN
+                    INSERT INTO [jit].[Grant_DBRole_Assignments] (
+                        GrantId, DbRoleId, AddAttemptUtc, AddSucceeded, AddError
+                    )
+                    VALUES (
+                        @GrantId, @DbRoleId, GETUTCDATE(), 0, @AddError
+                    );
+                END
                 
                 -- Log error but continue with other roles
-                INSERT INTO [jit].[AuditLog] (EventType, ActorLoginName, TargetUserId, GrantId, DetailsJson)
-                VALUES ('RoleAddError', @CurrentUser, @UserId, @GrantId,
-                    '{"DatabaseName":"' + @DatabaseName + '","DbRoleName":"' + @DbRoleName + '","Error":"' + REPLACE(@AddError, '"', '""') + '"}');
+                DECLARE @EscDbName NVARCHAR(MAX) = REPLACE(ISNULL(@DatabaseName, ''), '\', '\\');
+                SET @EscDbName = REPLACE(@EscDbName, '"', '""');
+                DECLARE @EscDbRole NVARCHAR(MAX) = REPLACE(ISNULL(@DbRoleName, ''), '\', '\\');
+                SET @EscDbRole = REPLACE(@EscDbRole, '"', '""');
+                DECLARE @EscAddError NVARCHAR(MAX) = REPLACE(ISNULL(@AddError, ''), '\', '\\');
+                SET @EscAddError = REPLACE(@EscAddError, '"', '""');
+                INSERT INTO [jit].[AuditLog] (
+                    EventType,
+                    ActorUserId,
+                    ActorUserContextVersionId,
+                    ActorLoginName,
+                    TargetUserId,
+                    TargetUserContextVersionId,
+                    GrantId,
+                    DetailsJson
+                )
+                VALUES ('RoleAddError', @IssuedByUserId, @IssuedByUserContextVersionId, @CurrentUser, @UserId, @UserContextVersionId, @GrantId,
+                    '{"DatabaseName":"' + @EscDbName + '","DbRoleName":"' + @EscDbRole + '","Error":"' + @EscAddError + '"}');
             END CATCH
             
             FETCH NEXT FROM role_cursor INTO @DatabaseName, @DbRoleName, @DbRoleId;
@@ -138,9 +209,21 @@ BEGIN
         DEALLOCATE role_cursor;
         
         -- Log audit
-        INSERT INTO [jit].[AuditLog] (EventType, ActorUserId, ActorLoginName, TargetUserId, RequestId, GrantId, DetailsJson)
-        VALUES ('GrantIssued', @IssuedByUserId, @CurrentUser, @UserId, @RequestId, @GrantId,
-            '{"RoleId":' + CAST(@RoleId AS NVARCHAR(10)) + 
+        INSERT INTO [jit].[AuditLog] (
+            EventType,
+            ActorUserId,
+            ActorUserContextVersionId,
+            ActorLoginName,
+            TargetUserId,
+            TargetUserContextVersionId,
+            RequestId,
+            GrantId,
+            DetailsJson
+        )
+        VALUES ('GrantIssued', @IssuedByUserId, @IssuedByUserContextVersionId, @CurrentUser, @UserId, @UserContextVersionId, @RequestId, @GrantId,
+            '{"RoleId":' + CAST(@RoleId AS NVARCHAR(10)) +
+            ',"RoleName":"' + ISNULL(REPLACE(@RoleName, '"', '""'), '') + '"' +
+            ',"ValidFromUtc":"' + CAST(@ValidFromUtc AS NVARCHAR(50)) + '"' +
             ',"ValidToUtc":"' + CAST(@ValidToUtc AS NVARCHAR(50)) + '"}');
         
         -- Update request status if not already auto-approved
@@ -162,4 +245,3 @@ BEGIN
     END CATCH
 END
 GO
-

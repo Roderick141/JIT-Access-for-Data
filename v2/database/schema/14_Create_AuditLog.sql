@@ -21,8 +21,10 @@ CREATE TABLE [jit].[AuditLog](
     [EventUtc] [datetime2](7) NOT NULL CONSTRAINT [DF_AuditLog_EventUtc] DEFAULT (GETUTCDATE()),
     [EventType] [nvarchar](100) NOT NULL,
     [ActorUserId] [nvarchar](255) NULL,
+    [ActorUserContextVersionId] [bigint] NULL,
     [ActorLoginName] [nvarchar](255) NOT NULL,
     [TargetUserId] [nvarchar](255) NULL,
+    [TargetUserContextVersionId] [bigint] NULL,
     [RequestId] [bigint] NULL,
     [GrantId] [bigint] NULL,
     [DetailsJson] [nvarchar](max) NULL,
@@ -35,10 +37,20 @@ ALTER TABLE [jit].[AuditLog] WITH CHECK ADD CONSTRAINT [FK_AuditLog_ActorUsers]
 
 ALTER TABLE [jit].[AuditLog] CHECK CONSTRAINT [FK_AuditLog_ActorUsers]
 
+ALTER TABLE [jit].[AuditLog] WITH CHECK ADD CONSTRAINT [FK_AuditLog_ActorUserContextVersions]
+    FOREIGN KEY([ActorUserContextVersionId]) REFERENCES [jit].[User_Context_Versions] ([UserContextVersionId])
+
+ALTER TABLE [jit].[AuditLog] CHECK CONSTRAINT [FK_AuditLog_ActorUserContextVersions]
+
 ALTER TABLE [jit].[AuditLog] WITH CHECK ADD CONSTRAINT [FK_AuditLog_TargetUsers] 
     FOREIGN KEY([TargetUserId]) REFERENCES [jit].[Users] ([UserId])
 
 ALTER TABLE [jit].[AuditLog] CHECK CONSTRAINT [FK_AuditLog_TargetUsers]
+
+ALTER TABLE [jit].[AuditLog] WITH CHECK ADD CONSTRAINT [FK_AuditLog_TargetUserContextVersions]
+    FOREIGN KEY([TargetUserContextVersionId]) REFERENCES [jit].[User_Context_Versions] ([UserContextVersionId])
+
+ALTER TABLE [jit].[AuditLog] CHECK CONSTRAINT [FK_AuditLog_TargetUserContextVersions]
 
 ALTER TABLE [jit].[AuditLog] WITH CHECK ADD CONSTRAINT [FK_AuditLog_Requests] 
     FOREIGN KEY([RequestId]) REFERENCES [jit].[Requests] ([RequestId])
@@ -54,6 +66,12 @@ CREATE NONCLUSTERED INDEX [IX_AuditLog_EventUtc_EventType_ActorLoginName] ON [ji
     WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 
 CREATE NONCLUSTERED INDEX [IX_AuditLog_TargetUserId] ON [jit].[AuditLog]([TargetUserId] ASC)
+    WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
+
+CREATE NONCLUSTERED INDEX [IX_AuditLog_ActorUserContextVersionId] ON [jit].[AuditLog]([ActorUserContextVersionId] ASC)
+    WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
+
+CREATE NONCLUSTERED INDEX [IX_AuditLog_TargetUserContextVersionId] ON [jit].[AuditLog]([TargetUserContextVersionId] ASC)
     WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 
 CREATE NONCLUSTERED INDEX [IX_AuditLog_RequestId] ON [jit].[AuditLog]([RequestId] ASC)

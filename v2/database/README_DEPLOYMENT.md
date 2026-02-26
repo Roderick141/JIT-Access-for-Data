@@ -24,7 +24,8 @@ sqlcmd -S YourServerName -d DMAP_JIT_Permissions -i "02_Cleanup_Everything.sql"
 Master deployment script that:
 1. Creates all database tables (schema)
 2. Creates all stored procedures
-3. Optionally inserts test data (commented out by default)
+3. Inserts test data (development)
+4. Backfills `UserContextVersionId` columns and enforces context integrity constraints
 
 **Usage:**
 ```sql
@@ -35,24 +36,19 @@ Master deployment script that:
 sqlcmd -S ServerName -d DMAP_JIT_Permissions -i "database\01_Deploy_Everything.sql"
 ```
 
-**Note:** Test data insertion is commented out by default. To include test data, uncomment the test data section in the script.
+**Note:** The script currently includes test data insertion for development workflows.
 
 ### `02_Cleanup_Everything.sql`
-Template cleanup script with cleanup code commented out for safety.
-
-### `02_Cleanup_Everything_Execute.sql`
-**ACTIVE cleanup script** that removes all JIT Framework objects. **WARNING: This deletes all data!**
+Cleanup script that removes all JIT Framework objects. **WARNING: This deletes all data!**
 
 **Usage:**
 ```sql
 -- In SSMS with SQLCMD mode enabled:
-:r "database\02_Cleanup_Everything_Execute.sql"
+:r "database\02_Cleanup_Everything.sql"
 
 -- Or via sqlcmd:
-sqlcmd -S ServerName -d DMAP_JIT_Permissions -i "database\02_Cleanup_Everything_Execute.sql"
+sqlcmd -S ServerName -d DMAP_JIT_Permissions -i "database\02_Cleanup_Everything.sql"
 ```
-
-**Note:** Use `02_Cleanup_Everything_Execute.sql` when you want to actually perform cleanup. The other file is a template.
 
 ## Deployment Order
 
@@ -67,6 +63,10 @@ The deployment follows this order:
 3. **Test Data** (optional, `test_data/99_Insert_All_Test_Data.sql`)
    - Inserts sample data for testing
 
+4. **Post-Deploy Backfill** (`03_Backfill_UserContextVersionIds.sql`)
+   - Backfills temporal user context references into workflow/audit rows
+   - Enforces integrity constraints for required context mappings
+
 ## Cleanup Order
 
 The cleanup follows reverse dependency order:
@@ -75,7 +75,8 @@ The cleanup follows reverse dependency order:
    - Workflow tables first (AuditLog, Grant_DBRole_Assignments, etc.)
    - Then eligibility/team tables
    - Then role mapping tables
-   - Finally Users table
+   - Then `User_Context_Versions`
+   - Finally `Users` table
 3. **Drop Schema** (optional)
 
 ## Prerequisites
@@ -111,6 +112,11 @@ If you prefer to deploy components individually:
 ### 3. Test Data Only
 ```sql
 :r "test_data\99_Insert_All_Test_Data.sql"
+```
+
+### 4. Backfill Context IDs / Enforce Integrity
+```sql
+:r "03_Backfill_UserContextVersionIds.sql"
 ```
 
 ## Troubleshooting

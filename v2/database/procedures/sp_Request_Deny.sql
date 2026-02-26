@@ -29,6 +29,8 @@ BEGIN
     DECLARE @ApproverLoginName NVARCHAR(255);
     DECLARE @CanApprove BIT;
     DECLARE @ApprovalReason NVARCHAR(100);
+    DECLARE @ApproverUserContextVersionId BIGINT;
+    DECLARE @RequesterUserContextVersionId BIGINT;
     
     BEGIN TRY
         BEGIN TRANSACTION;
@@ -46,7 +48,9 @@ BEGIN
         END
         
         -- Get request details
-        SELECT @UserId = UserId
+        SELECT 
+            @UserId = UserId,
+            @RequesterUserContextVersionId = UserContextVersionId
         FROM [jit].[Requests]
         WHERE RequestId = @RequestId AND Status = 'Pending';
         
@@ -54,21 +58,40 @@ BEGIN
         BEGIN
             THROW 50004, 'Request not found or not pending', 1;
         END
+
+        IF @RequesterUserContextVersionId IS NULL
+        BEGIN
+            SELECT @RequesterUserContextVersionId = UserContextVersionId
+            FROM [jit].[vw_User_CurrentContext]
+            WHERE UserId = @UserId;
+        END
+
+        IF @RequesterUserContextVersionId IS NULL
+        BEGIN
+            THROW 50008, 'Requester has no active context version', 1;
+        END
         
         -- Get approver login name
-        SELECT @ApproverLoginName = LoginName
-        FROM [jit].[Users]
+        SELECT
+            @ApproverLoginName = LoginName,
+            @ApproverUserContextVersionId = UserContextVersionId
+        FROM [jit].[vw_User_CurrentContext]
         WHERE UserId = @ApproverUserId;
+
+        IF @ApproverUserContextVersionId IS NULL
+        BEGIN
+            THROW 50009, 'Approver has no active context version', 1;
+        END
         
         IF @ApproverLoginName IS NULL
             SET @ApproverLoginName = @CurrentUser;
         
         -- Record denial
         INSERT INTO [jit].[Approvals] (
-            RequestId, ApproverUserId, ApproverLoginName, Decision, DecisionComment
+            RequestId, ApproverUserId, ApproverUserContextVersionId, ApproverLoginName, Decision, DecisionComment
         )
         VALUES (
-            @RequestId, @ApproverUserId, @ApproverLoginName, 'Denied', @DecisionComment
+            @RequestId, @ApproverUserId, @ApproverUserContextVersionId, @ApproverLoginName, 'Denied', @DecisionComment
         );
         
         -- Update request status
@@ -78,8 +101,42 @@ BEGIN
         WHERE RequestId = @RequestId;
         
         -- Log audit
-        INSERT INTO [jit].[AuditLog] (EventType, ActorUserId, ActorLoginName, TargetUserId, RequestId, DetailsJson)
-        VALUES ('Denied', @ApproverUserId, @ApproverLoginName, @UserId, @RequestId, '{}');
+        DECLARE @DeniedRoleNames NVARCHAR(MAX) = (
+            SELECT STRING_AGG(r.RoleName, ', ')
+            FROM [jit].[Request_Roles] rr
+            INNER JOIN [jit].[Roles] r ON r.RoleId = rr.RoleId AND r.IsActive = 1
+            WHERE rr.RequestId = @RequestId
+        );
+        DECLARE @DeniedRoleIds NVARCHAR(MAX) = (
+            SELECT STRING_AGG(CAST(rr.RoleId AS NVARCHAR(20)), ',')
+            FROM [jit].[Request_Roles] rr
+            WHERE rr.RequestId = @RequestId
+        );
+        DECLARE @EscapedDenyComment NVARCHAR(MAX) = ISNULL(REPLACE(@DecisionComment, '"', '""'), '');
+        DECLARE @DenyDetailsJson NVARCHAR(MAX) =
+            '{"RoleIds":[' + ISNULL(@DeniedRoleIds, '') + '],' +
+            '"RoleNames":"' + ISNULL(REPLACE(@DeniedRoleNames, '"', '""'), '') + '",' +
+            '"DecisionComment":"' + @EscapedDenyComment + '"}';
+        INSERT INTO [jit].[AuditLog] (
+            EventType,
+            ActorUserId,
+            ActorUserContextVersionId,
+            ActorLoginName,
+            TargetUserId,
+            TargetUserContextVersionId,
+            RequestId,
+            DetailsJson
+        )
+        VALUES (
+            'Denied',
+            @ApproverUserId,
+            @ApproverUserContextVersionId,
+            @ApproverLoginName,
+            @UserId,
+            @RequesterUserContextVersionId,
+            @RequestId,
+            @DenyDetailsJson
+        );
         
         COMMIT TRANSACTION;
         

@@ -229,6 +229,19 @@ C:\Tools\nssm\nssm.exe set JITAccess-API AppStdout "C:\JITAccess\logs\api-out.lo
 C:\Tools\nssm\nssm.exe set JITAccess-API AppStderr "C:\JITAccess\logs\api-err.log"
 ```
 
+Enable NSSM log rotation (example: rotate daily or at 20 MB, whichever comes first):
+
+```powershell
+C:\Tools\nssm\nssm.exe set JITAccess-API AppRotateFiles 1
+C:\Tools\nssm\nssm.exe set JITAccess-API AppRotateOnline 1
+C:\Tools\nssm\nssm.exe set JITAccess-API AppRotateSeconds 86400
+C:\Tools\nssm\nssm.exe set JITAccess-API AppRotateBytes 20971520
+```
+
+Notes:
+- `AppRotateOnline=1` allows rotation while service is running.
+- Keep `api-out.log` / `api-err.log` as active files; NSSM creates rotated files in the same folder.
+
 Set environment for service process:
 
 ```powershell
@@ -360,6 +373,38 @@ Restart-WebAppPool -Name "JITAccess-api-app-pool"  # use your actual app pool na
   - `C:\JITAccess\logs\api-err.log`
 - IIS logs: standard IIS log directory
 - YARP app logs: configure via ASP.NET Core logging if needed
+
+### 11.3 Log cleanup retention task
+
+NSSM rotation prevents unbounded growth of a single file, but rotated logs still need retention cleanup.
+
+Create cleanup script `C:\JITAccess\scripts\cleanup-logs.ps1`:
+
+```powershell
+param(
+  [int]$RetentionDays = 30
+)
+
+$cutoff = (Get-Date).AddDays(-$RetentionDays)
+Get-ChildItem "C:\JITAccess\logs" -File |
+  Where-Object { $_.Name -like "api-*.log*" -and $_.LastWriteTime -lt $cutoff } |
+  Remove-Item -Force -ErrorAction SilentlyContinue
+```
+
+Register a daily scheduled task (runs as SYSTEM at 02:30):
+
+```powershell
+New-Item -ItemType Directory -Force C:\JITAccess\scripts | Out-Null
+
+schtasks /Create /TN "JITAccess-LogCleanup" /SC DAILY /ST 02:30 /RU "SYSTEM" `
+  /TR "powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\JITAccess\scripts\cleanup-logs.ps1 -RetentionDays 30" /F
+```
+
+Validate the task:
+
+```powershell
+schtasks /Query /TN "JITAccess-LogCleanup" /V /FO LIST
+```
 
 ## 12. Hardening Notes
 

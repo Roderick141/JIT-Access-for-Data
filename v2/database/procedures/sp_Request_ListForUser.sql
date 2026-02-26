@@ -43,7 +43,7 @@ BEGIN
     INNER JOIN [jit].[Request_Roles] rr ON r.RequestId = rr.RequestId
     INNER JOIN [jit].[Roles] rol ON rr.RoleId = rol.RoleId AND rol.IsActive = 1
     LEFT JOIN [jit].[Approvals] a ON r.RequestId = a.RequestId
-    LEFT JOIN [jit].[Users] approver ON approver.UserId = a.ApproverUserId
+    LEFT JOIN [jit].[vw_User_CurrentContext] approver ON approver.UserId = a.ApproverUserId
     LEFT JOIN [jit].[Grants] g ON g.RequestId = r.RequestId
     WHERE r.UserId = @UserId
     GROUP BY

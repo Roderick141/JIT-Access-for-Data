@@ -165,7 +165,14 @@ export interface AuditLogEntry {
   AuditLogId: number;
   EventType: string;
   EventUtc: string;
-  UserId?: number;
+  UserId?: string;
+  ActorDisplayName?: string;
+  TargetDisplayName?: string;
+  RequestId?: number;
+  GrantId?: number;
+  RoleName?: string;
+  RoleNames?: string;
+  DisplayMessage?: string;
   Details?: string;
   [key: string]: unknown;
 }

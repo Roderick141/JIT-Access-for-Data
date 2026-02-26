@@ -29,6 +29,7 @@ BEGIN
         Surname,
         DisplayName,
         Email,
+        UserContextVersionId,
         Division,
         Department,
         JobTitle,
@@ -36,11 +37,12 @@ BEGIN
         IsAdmin,
         IsApprover,
         IsDataSteward,
+        IsEnabled,
         IsActive,
         LastAdSyncUtc,
         CreatedUtc,
         UpdatedUtc
-    FROM [jit].[Users]
+    FROM [jit].[vw_User_CurrentContext]
     WHERE LoginName = @LoginName;
 END
 GO

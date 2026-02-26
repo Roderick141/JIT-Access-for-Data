@@ -13,7 +13,7 @@ AS
 BEGIN
     SET NOCOUNT ON;
     SELECT *, COUNT(*) OVER() AS TotalCount
-    FROM [jit].[Users] u
+    FROM [jit].[vw_User_CurrentContext] u
     WHERE (@Search = '' OR u.DisplayName LIKE '%' + @Search + '%' OR u.Email LIKE '%' + @Search + '%')
       AND (@Department = '' OR u.Department = @Department)
       AND (
@@ -22,7 +22,7 @@ BEGIN
             OR (@Role = 'approver' AND u.IsApprover = 1)
             OR (@Role = 'steward' AND u.IsDataSteward = 1)
       )
-      AND (@Status = '' OR (@Status = 'active' AND u.IsActive = 1) OR (@Status = 'inactive' AND u.IsActive = 0))
+      AND (@Status = '' OR (@Status = 'active' AND u.IsEnabled = 1) OR (@Status = 'inactive' AND u.IsEnabled = 0))
     ORDER BY u.DisplayName
     OFFSET ((@PageNumber - 1) * @PageSize) ROWS FETCH NEXT @PageSize ROWS ONLY;
 END

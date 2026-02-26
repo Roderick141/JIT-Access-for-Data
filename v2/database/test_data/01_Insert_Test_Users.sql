@@ -42,5 +42,46 @@ VALUES
 
 PRINT CAST(@@ROWCOUNT AS VARCHAR(10)) + ' users inserted'
 
+INSERT INTO [jit].[User_Context_Versions] (
+    UserId,
+    Division,
+    Department,
+    JobTitle,
+    SeniorityLevel,
+    IsAdmin,
+    IsApprover,
+    IsDataSteward,
+    IsEnabled,
+    IsActive,
+    LastAdSyncUtc,
+    ValidFromUtc,
+    CreatedBy,
+    UpdatedBy
+)
+SELECT
+    u.UserId,
+    u.Division,
+    u.Department,
+    u.JobTitle,
+    u.SeniorityLevel,
+    u.IsAdmin,
+    u.IsApprover,
+    u.IsDataSteward,
+    u.IsActive,
+    1,
+    u.LastAdSyncUtc,
+    GETUTCDATE(),
+    'SYSTEM',
+    'SYSTEM'
+FROM [jit].[Users] u
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM [jit].[User_Context_Versions] c
+    WHERE c.UserId = u.UserId
+      AND c.IsActive = 1
+);
+
+PRINT CAST(@@ROWCOUNT AS VARCHAR(10)) + ' user context rows inserted'
+
 GO
 

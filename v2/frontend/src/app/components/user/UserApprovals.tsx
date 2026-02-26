@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { Search, CheckCircle, XCircle, Clock, MessageSquare, AlertTriangle } from "lucide-react";
 import { fetchPendingApprovals, approveRequest, denyRequest } from "@/api/endpoints";
 import type { PendingApproval } from "@/api/types";
+import { formatDateAmsterdam, parseUtcLike } from "@/app/components/shared/dateTime";
 
 type ApprovalStatus = "pending" | "approved" | "rejected";
 
@@ -16,6 +17,7 @@ interface MappedRequest {
   sensitivity: string;
   duration: number;
   requestDate: string;
+  requestDateUtc: string | null;
   justification: string;
   status: ApprovalStatus;
 }
@@ -39,7 +41,8 @@ function mapApproval(a: PendingApproval): MappedRequest {
     roles,
     sensitivity: (a.SensitivityLevel ?? "standard").toLowerCase(),
     duration: Math.floor((a.RequestedDurationMinutes ?? 0) / 1440) || 1,
-    requestDate: a.CreatedUtc ? new Date(a.CreatedUtc).toLocaleDateString("en-CA") : "",
+    requestDate: formatDateAmsterdam(a.CreatedUtc, ""),
+    requestDateUtc: a.CreatedUtc ?? null,
     justification: a.Justification ?? "",
     status,
   };
@@ -84,7 +87,9 @@ export function UserApprovals() {
     return filtered.sort((a, b) => {
       if (a.status === "pending" && b.status !== "pending") return -1;
       if (a.status !== "pending" && b.status === "pending") return 1;
-      return new Date(b.requestDate).getTime() - new Date(a.requestDate).getTime();
+      const bTime = parseUtcLike(b.requestDateUtc)?.getTime() ?? 0;
+      const aTime = parseUtcLike(a.requestDateUtc)?.getTime() ?? 0;
+      return bTime - aTime;
     });
   }, [searchQuery, statusFilter, approvalRequests]);
 

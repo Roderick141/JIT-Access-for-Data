@@ -19,6 +19,7 @@ GO
 CREATE TABLE [jit].[Requests](
     [RequestId] [bigint] IDENTITY(1,1) NOT NULL,
     [UserId] [nvarchar](255) NOT NULL,
+    [UserContextVersionId] [bigint] NULL,
     [RequestedDurationMinutes] [int] NOT NULL,
     [Justification] [nvarchar](max) NULL,
     [TicketRef] [nvarchar](255) NULL,
@@ -38,7 +39,15 @@ ALTER TABLE [jit].[Requests] WITH CHECK ADD CONSTRAINT [FK_Requests_Users]
 
 ALTER TABLE [jit].[Requests] CHECK CONSTRAINT [FK_Requests_Users]
 
+ALTER TABLE [jit].[Requests] WITH CHECK ADD CONSTRAINT [FK_Requests_UserContextVersions]
+    FOREIGN KEY([UserContextVersionId]) REFERENCES [jit].[User_Context_Versions] ([UserContextVersionId])
+
+ALTER TABLE [jit].[Requests] CHECK CONSTRAINT [FK_Requests_UserContextVersions]
+
 CREATE NONCLUSTERED INDEX [IX_Requests_UserId] ON [jit].[Requests]([UserId] ASC)
+    WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
+
+CREATE NONCLUSTERED INDEX [IX_Requests_UserContextVersionId] ON [jit].[Requests]([UserContextVersionId] ASC)
     WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 
 CREATE NONCLUSTERED INDEX [IX_Requests_Status] ON [jit].[Requests]([Status] ASC)

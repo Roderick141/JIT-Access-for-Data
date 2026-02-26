@@ -8,6 +8,7 @@ import {
   denyRequest,
 } from "@/api/endpoints";
 import type { AdminStats, PendingApproval, AuditLogEntry } from "@/api/types";
+import { formatDateTimeMinute, toAuditActor, toAuditSummary, toFriendlyAuditEvent } from "@/app/components/shared/auditDisplay";
 
 interface MappedApproval {
   id: number;
@@ -57,13 +58,14 @@ function mapAuditEntry(e: AuditLogEntry): ActivityItem {
   else if (eventType.includes("role") && eventType.includes("creat")) type = "role-created";
   else if (eventType.includes("user")) type = "user-added";
 
-  const time = e.EventUtc ? new Date(e.EventUtc).toLocaleString() : "";
+  const time = formatDateTimeMinute(e.EventUtc);
+  const prettyAction = toFriendlyAuditEvent(e.EventType);
 
   return {
     type,
-    user: String(e.UserId ?? "System"),
-    action: e.EventType ?? "Event",
-    details: e.Details ?? "",
+    user: toAuditActor(e),
+    action: prettyAction,
+    details: toAuditSummary(e),
     time,
   };
 }

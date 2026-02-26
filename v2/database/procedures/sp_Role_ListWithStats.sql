@@ -42,8 +42,8 @@ BEGIN
             u.Department,
             u.Division,
             u.SeniorityLevel
-        FROM [jit].[Users] u
-        WHERE u.IsActive = 1
+        FROM [jit].[vw_User_CurrentContext] u
+        WHERE u.IsEnabled = 1
     ),
     RuleAllow AS (
         SELECT DISTINCT

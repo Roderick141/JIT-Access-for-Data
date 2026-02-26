@@ -40,8 +40,9 @@ BEGIN
         @ApproverIsAdmin = IsAdmin,
         @ApproverIsDataSteward = IsDataSteward,
         @ApproverIsApprover = IsApprover
-    FROM [jit].[Users]
-    WHERE UserId = @ApproverUserId;
+        FROM [jit].[vw_User_CurrentContext]
+        WHERE UserId = @ApproverUserId
+            AND IsEnabled = 1;
     
     -- Get requests where approver can approve ALL roles
     SELECT DISTINCT
@@ -162,8 +163,9 @@ BEGIN
     FROM [jit].[Requests] r
     INNER JOIN [jit].[Request_Roles] rr ON r.RequestId = rr.RequestId
     INNER JOIN [jit].[Roles] rol ON rr.RoleId = rol.RoleId AND rol.IsActive = 1
-    INNER JOIN [jit].[Users] u ON r.UserId = u.UserId
+        INNER JOIN [jit].[vw_User_CurrentContext] u ON r.UserId = u.UserId
     WHERE r.Status = 'Pending'
+            AND u.IsEnabled = 1
     GROUP BY r.RequestId, r.UserId, u.DisplayName, u.LoginName, u.Email, u.Department, u.Division, 
              u.SeniorityLevel, r.RequestedDurationMinutes, r.Justification, r.TicketRef, 
              r.UserDeptSnapshot, r.UserTitleSnapshot, r.CreatedUtc, r.Status

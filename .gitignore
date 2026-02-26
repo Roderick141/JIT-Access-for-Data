@@ -1,3 +1,7 @@
+# Claude Code temp files
+tmpclaude-*
+nul
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]

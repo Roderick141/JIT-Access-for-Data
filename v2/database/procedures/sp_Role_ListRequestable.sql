@@ -30,8 +30,9 @@ BEGIN
     SELECT 
         @UserDivision = Division,
         @UserDepartment = Department
-    FROM [jit].[Users]
-    WHERE UserId = @UserId;
+        FROM [jit].[vw_User_CurrentContext]
+        WHERE UserId = @UserId
+            AND IsEnabled = 1;
     
     SELECT 
         r.RoleId,

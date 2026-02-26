@@ -32,6 +32,8 @@ BEGIN
     DECLARE @ApprovalReason NVARCHAR(100);
     DECLARE @CurrentRoleId INT;
     DECLARE @GrantIds NVARCHAR(MAX) = '';
+    DECLARE @ApproverUserContextVersionId BIGINT;
+    DECLARE @RequesterUserContextVersionId BIGINT;
     
     BEGIN TRY
         BEGIN TRANSACTION;
@@ -51,6 +53,7 @@ BEGIN
         -- Get request details
         SELECT 
             @UserId = UserId,
+            @RequesterUserContextVersionId = UserContextVersionId,
             @RequestedDurationMinutes = RequestedDurationMinutes
         FROM [jit].[Requests]
         WHERE RequestId = @RequestId AND Status = 'Pending';
@@ -59,21 +62,40 @@ BEGIN
         BEGIN
             THROW 50004, 'Request not found or not pending', 1;
         END
+
+        IF @RequesterUserContextVersionId IS NULL
+        BEGIN
+            SELECT @RequesterUserContextVersionId = UserContextVersionId
+            FROM [jit].[vw_User_CurrentContext]
+            WHERE UserId = @UserId;
+        END
+
+        IF @RequesterUserContextVersionId IS NULL
+        BEGIN
+            THROW 50008, 'Requester has no active context version', 1;
+        END
         
         -- Record approval
         DECLARE @ApproverLoginName NVARCHAR(255);
-        SELECT @ApproverLoginName = LoginName
-        FROM [jit].[Users]
+        SELECT 
+            @ApproverLoginName = LoginName,
+            @ApproverUserContextVersionId = UserContextVersionId
+        FROM [jit].[vw_User_CurrentContext]
         WHERE UserId = @ApproverUserId;
+
+        IF @ApproverUserContextVersionId IS NULL
+        BEGIN
+            THROW 50009, 'Approver has no active context version', 1;
+        END
         
         IF @ApproverLoginName IS NULL
             SET @ApproverLoginName = @CurrentUser;
         
         INSERT INTO [jit].[Approvals] (
-            RequestId, ApproverUserId, ApproverLoginName, Decision, DecisionComment
+            RequestId, ApproverUserId, ApproverUserContextVersionId, ApproverLoginName, Decision, DecisionComment
         )
         VALUES (
-            @RequestId, @ApproverUserId, @ApproverLoginName, 'Approved', @DecisionComment
+            @RequestId, @ApproverUserId, @ApproverUserContextVersionId, @ApproverLoginName, 'Approved', @DecisionComment
         );
         
         -- Update request status
@@ -100,10 +122,12 @@ BEGIN
             EXEC [jit].[sp_Grant_Issue]
                 @RequestId = @RequestId,
                 @UserId = @UserId,
+                @UserContextVersionId = @RequesterUserContextVersionId,
                 @RoleId = @CurrentRoleId,
                 @ValidFromUtc = @GrantValidFromUtc,
                 @ValidToUtc = @GrantValidToUtc,
                 @IssuedByUserId = @ApproverUserId,
+                @IssuedByUserContextVersionId = @ApproverUserContextVersionId,
                 @GrantId = @GrantId OUTPUT;
             
             -- Collect grant IDs for audit log
@@ -121,9 +145,43 @@ BEGIN
         END
         
         -- Log audit
-        DECLARE @DetailsJson NVARCHAR(MAX) = '{"GrantIds":[' + @GrantIds + ']}';
-        INSERT INTO [jit].[AuditLog] (EventType, ActorUserId, ActorLoginName, TargetUserId, RequestId, DetailsJson)
-        VALUES ('Approved', @ApproverUserId, @ApproverLoginName, @UserId, @RequestId, @DetailsJson);
+        DECLARE @ApprovedRoleNames NVARCHAR(MAX) = (
+            SELECT STRING_AGG(r.RoleName, ', ')
+            FROM [jit].[Request_Roles] rr
+            INNER JOIN [jit].[Roles] r ON r.RoleId = rr.RoleId AND r.IsActive = 1
+            WHERE rr.RequestId = @RequestId
+        );
+        DECLARE @ApprovedRoleIds NVARCHAR(MAX) = (
+            SELECT STRING_AGG(CAST(rr.RoleId AS NVARCHAR(20)), ',')
+            FROM [jit].[Request_Roles] rr
+            WHERE rr.RequestId = @RequestId
+        );
+        DECLARE @EscapedDecisionComment NVARCHAR(MAX) = ISNULL(REPLACE(@DecisionComment, '"', '""'), '');
+        DECLARE @DetailsJson NVARCHAR(MAX) =
+            '{"GrantIds":[' + ISNULL(@GrantIds, '') + '],' +
+            '"RoleIds":[' + ISNULL(@ApprovedRoleIds, '') + '],' +
+            '"RoleNames":"' + ISNULL(REPLACE(@ApprovedRoleNames, '"', '""'), '') + '",' +
+            '"DecisionComment":"' + @EscapedDecisionComment + '"}';
+        INSERT INTO [jit].[AuditLog] (
+            EventType,
+            ActorUserId,
+            ActorUserContextVersionId,
+            ActorLoginName,
+            TargetUserId,
+            TargetUserContextVersionId,
+            RequestId,
+            DetailsJson
+        )
+        VALUES (
+            'Approved',
+            @ApproverUserId,
+            @ApproverUserContextVersionId,
+            @ApproverLoginName,
+            @UserId,
+            @RequesterUserContextVersionId,
+            @RequestId,
+            @DetailsJson
+        );
         
         COMMIT TRANSACTION;
         

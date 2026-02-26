@@ -20,6 +20,7 @@ CREATE TABLE [jit].[Approvals](
     [ApprovalId] [bigint] IDENTITY(1,1) NOT NULL,
     [RequestId] [bigint] NOT NULL,
     [ApproverUserId] [nvarchar](255) NULL,
+    [ApproverUserContextVersionId] [bigint] NULL,
     [ApproverLoginName] [nvarchar](255) NOT NULL,
     [Decision] [nvarchar](50) NOT NULL,
     [DecisionComment] [nvarchar](max) NULL,
@@ -39,10 +40,18 @@ ALTER TABLE [jit].[Approvals] WITH CHECK ADD CONSTRAINT [FK_Approvals_Users]
 
 ALTER TABLE [jit].[Approvals] CHECK CONSTRAINT [FK_Approvals_Users]
 
+ALTER TABLE [jit].[Approvals] WITH CHECK ADD CONSTRAINT [FK_Approvals_UserContextVersions]
+    FOREIGN KEY([ApproverUserContextVersionId]) REFERENCES [jit].[User_Context_Versions] ([UserContextVersionId])
+
+ALTER TABLE [jit].[Approvals] CHECK CONSTRAINT [FK_Approvals_UserContextVersions]
+
 CREATE NONCLUSTERED INDEX [IX_Approvals_RequestId] ON [jit].[Approvals]([RequestId] ASC)
     WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 
 CREATE NONCLUSTERED INDEX [IX_Approvals_ApproverUserId] ON [jit].[Approvals]([ApproverUserId] ASC)
+    WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
+
+CREATE NONCLUSTERED INDEX [IX_Approvals_ApproverUserContextVersionId] ON [jit].[Approvals]([ApproverUserContextVersionId] ASC)
     WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 
 GO

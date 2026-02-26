@@ -362,6 +362,7 @@ export function ManageRoles() {
         .filter((d) => selectedDatabaseRoles.includes(d.DbRoleName))
         .map((d) => d.DbRoleId);
       await setRoleDbRoles(selectedRole.id, assignedIds);
+      loadRoles();
       setEditPermissionsModalOpen(false);
     } catch (err: unknown) {
       alert(`Save failed: ${err instanceof Error ? err.message : String(err)}`);

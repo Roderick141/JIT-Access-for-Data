@@ -7,9 +7,6 @@
 --   Or enable SQLCMD mode in SSMS and run this script
 -- =============================================
 
-PRINT '========================================'
-PRINT 'JIT Access Framework - Full Deployment'
-PRINT '========================================'
 PRINT ''
 PRINT 'This script will:'
 PRINT '  1. Create database schema (tables)'
@@ -22,7 +19,6 @@ GO
 
 USE [DMAP_JIT_Permissions]
 GO
-
 -- =============================================
 -- Step 1: Create Database Schema (Tables)
 -- =============================================
@@ -69,6 +65,20 @@ PRINT 'Test data insertion completed!'
 PRINT ''
 
 -- =============================================
+-- Step 4: Backfill and Enforce Context Integrity
+-- =============================================
+PRINT '========================================'
+PRINT 'Step 4: Backfilling User Context References'
+PRINT '========================================'
+PRINT ''
+
+:r .\03_Backfill_UserContextVersionIds.sql
+
+PRINT ''
+PRINT 'Backfill and integrity enforcement completed!'
+PRINT ''
+
+-- =============================================
 -- Deployment Complete
 -- =============================================
 PRINT ''
@@ -79,9 +89,10 @@ PRINT ''
 PRINT 'Next steps:'
 PRINT '  1. Verify all tables were created successfully'
 PRINT '  2. Verify all stored procedures were created successfully'
-PRINT '  3. (Optional) Uncomment test data section above and re-run to insert test data'
-PRINT '  4. Set up admin users: UPDATE jit.Users SET IsAdmin = 1 WHERE LoginName = ''DOMAIN\adminuser'''
-PRINT '  5. Configure service account permissions'
+PRINT '  3. Verify backfill output for UserContextVersionId columns'
+PRINT '  4. (Optional) Re-run test data section for development testing'
+PRINT '  5. Set up admin users: UPDATE jit.Users SET IsAdmin = 1 WHERE LoginName = ''DOMAIN\adminuser'''
+PRINT '  6. Configure service account permissions'
 PRINT ''
 GO
 

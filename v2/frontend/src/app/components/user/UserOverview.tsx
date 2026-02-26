@@ -2,18 +2,19 @@ import { useEffect, useState } from "react";
 import { Shield, Clock, CheckCircle, AlertCircle } from "lucide-react";
 import { fetchGrants, fetchUserRequests } from "@/api/endpoints";
 import type { Grant, UserRequest } from "@/api/types";
+import { formatDateAmsterdam, parseUtcLike } from "@/app/components/shared/dateTime";
 
 function deriveGrantStatus(grant: Grant): "Active" | "Expiring Soon" {
   if (!grant.ExpiryUtc) return "Active";
-  const expiry = new Date(grant.ExpiryUtc);
+  const expiry = parseUtcLike(grant.ExpiryUtc);
+  if (!expiry) return "Active";
   const now = new Date();
-  const diffDays = (expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
-  return diffDays <= 7 ? "Expiring Soon" : "Active";
+  const diffHours = (expiry.getTime() - now.getTime()) / (1000 * 60 * 60);
+  return diffHours >= 0 && diffHours <= 12 ? "Expiring Soon" : "Active";
 }
 
 function formatDate(utc: string | null | undefined): string {
-  if (!utc) return "Never";
-  return new Date(utc).toLocaleDateString("en-CA"); // YYYY-MM-DD
+  return formatDateAmsterdam(utc, "Never");
 }
 
 export function UserOverview() {
@@ -138,11 +139,6 @@ export function UserOverview() {
                         </span>
                       </div>
                     </div>
-                    {role.status === "Expiring Soon" && (
-                      <button className="text-xs text-primary hover:underline whitespace-nowrap">
-                        Request Extension
-                      </button>
-                    )}
                   </div>
                 </div>
               ))

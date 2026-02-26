@@ -9,9 +9,10 @@ BEGIN
     SET NOCOUNT ON;
     SELECT u.UserId, u.DisplayName, u.Email
     FROM [jit].[User_Teams] ut
-    INNER JOIN [jit].[Users] u ON u.UserId = ut.UserId
+        INNER JOIN [jit].[vw_User_CurrentContext] u ON u.UserId = ut.UserId
     WHERE ut.TeamId = @TeamId
-      AND ut.IsActive = 1;
+            AND ut.IsActive = 1
+            AND u.IsEnabled = 1;
 END
 GO
 

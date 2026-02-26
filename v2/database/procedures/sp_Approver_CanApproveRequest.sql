@@ -54,14 +54,15 @@ BEGIN
         @ApproverIsAdmin = IsAdmin,
         @ApproverIsDataSteward = IsDataSteward,
         @ApproverIsApprover = IsApprover
-    FROM [jit].[Users]
-    WHERE UserId = @ApproverUserId;
+        FROM [jit].[vw_User_CurrentContext]
+        WHERE UserId = @ApproverUserId
+            AND IsEnabled = 1;
     
     -- Get requester details
     SELECT 
         @RequesterDivision = Division,
         @RequesterSeniority = SeniorityLevel
-    FROM [jit].[Users]
+    FROM [jit].[vw_User_CurrentContext]
     WHERE UserId = @RequesterUserId;
     
     SET @CanApprove = 0;

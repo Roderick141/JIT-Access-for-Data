@@ -24,7 +24,7 @@ app.include_router(approver.router)
 app.include_router(admin.router)
 
 
-@app.get("/health")
+@app.api_route("/health", methods=["GET", "HEAD"])
 def health():
     return success({"status": "ok"})
 

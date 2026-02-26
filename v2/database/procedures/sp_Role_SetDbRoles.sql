@@ -25,7 +25,7 @@ BEGIN
     WHERE RoleId = @RoleId AND IsActive = 1;
 
     INSERT INTO [jit].[Role_To_DB_Roles] (RoleId, DbRoleId, IsRequired, IsActive, ValidFromUtc)
-    SELECT @RoleId, TRY_CONVERT(INT, LTRIM(RTRIM(value))), 1, 1, GETUTCDATE()
+    SELECT DISTINCT @RoleId, TRY_CONVERT(INT, LTRIM(RTRIM(value))), 1, 1, GETUTCDATE()
     FROM STRING_SPLIT(ISNULL(@DbRoleIdsCsv, ''), ',')
     WHERE LTRIM(RTRIM(value)) <> '';
 END

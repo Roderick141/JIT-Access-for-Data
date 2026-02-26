@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { fetchAuditLogs } from "@/api/endpoints";
 import type { AuditLogEntry } from "@/api/types";
+import { formatDateTimeMinute, toAuditActor, toAuditSummary, toFriendlyAuditEvent } from "@/app/components/shared/auditDisplay";
 
 const PAGE_SIZE = 25;
 
@@ -29,6 +30,12 @@ export function AuditLogs() {
         const bySearch =
           !s ||
           String(r.EventType ?? "").toLowerCase().includes(s) ||
+          String(toFriendlyAuditEvent(r.EventType)).toLowerCase().includes(s) ||
+          String(toAuditActor(r)).toLowerCase().includes(s) ||
+          String(r.TargetDisplayName ?? "").toLowerCase().includes(s) ||
+          String(r.RoleName ?? "").toLowerCase().includes(s) ||
+          String(r.RoleNames ?? "").toLowerCase().includes(s) ||
+          String(r.DisplayMessage ?? "").toLowerCase().includes(s) ||
           String(r.Details ?? "").toLowerCase().includes(s) ||
           String(r.AuditLogId ?? "").toLowerCase().includes(s);
         return byType && bySearch;
@@ -41,14 +48,17 @@ export function AuditLogs() {
   const eventTypes = Array.from(new Set(rows.map((x) => String(x.EventType ?? "")))).filter(Boolean);
 
   function exportCsv() {
-    const header = ["AuditLogId", "EventUtc", "EventType", "UserId", "Details"];
+    const header = ["AuditLogId", "Time", "Event", "Actor", "Target", "Role", "Summary", "RawDetails"];
     const lines = [header.join(",")].concat(
       filtered.map((r) =>
         [
           r.AuditLogId,
-          `"${String(r.EventUtc ?? "").replaceAll('"', '""')}"`,
-          `"${String(r.EventType ?? "").replaceAll('"', '""')}"`,
-          r.UserId ?? "",
+          `"${String(formatDateTimeMinute(r.EventUtc)).replaceAll('"', '""')}"`,
+          `"${String(toFriendlyAuditEvent(r.EventType)).replaceAll('"', '""')}"`,
+          `"${String(toAuditActor(r)).replaceAll('"', '""')}"`,
+          `"${String(r.TargetDisplayName ?? "").replaceAll('"', '""')}"`,
+          `"${String(r.RoleName ?? r.RoleNames ?? "").replaceAll('"', '""')}"`,
+          `"${String(toAuditSummary(r)).replaceAll('"', '""')}"`,
           `"${String(r.Details ?? "").replaceAll('"', '""')}"`,
         ].join(",")
       )
@@ -100,16 +110,18 @@ export function AuditLogs() {
               <th className="p-3">Time</th>
               <th className="p-3">Event</th>
               <th className="p-3">Actor</th>
-              <th className="p-3">Details</th>
+              <th className="p-3">Target</th>
+              <th className="p-3">Summary</th>
             </tr>
           </thead>
           <tbody>
             {paged.map((r) => (
               <tr key={r.AuditLogId} className="border-b border-border">
-                <td className="p-3">{new Date(r.EventUtc).toLocaleString()}</td>
-                <td className="p-3">{r.EventType}</td>
-                <td className="p-3">{r.UserId ?? "-"}</td>
-                <td className="p-3">{String(r.Details ?? "").slice(0, 120)}</td>
+                <td className="p-3">{formatDateTimeMinute(r.EventUtc)}</td>
+                <td className="p-3">{toFriendlyAuditEvent(r.EventType)}</td>
+                <td className="p-3">{toAuditActor(r)}</td>
+                <td className="p-3">{r.TargetDisplayName ?? "-"}</td>
+                <td className="p-3">{toAuditSummary(r) || "-"}</td>
               </tr>
             ))}
           </tbody>

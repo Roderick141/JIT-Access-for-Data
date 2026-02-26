@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
-import { CheckCircle, XCircle, Clock, RotateCcw } from "lucide-react";
+import { CheckCircle, XCircle, Clock, RotateCcw, Ban, Zap } from "lucide-react";
 import { fetchUserRequests, cancelRequest } from "@/api/endpoints";
 import type { UserRequest } from "@/api/types";
+import { formatDateAmsterdam, parseUtcLike } from "@/app/components/shared/dateTime";
 
 function formatDate(utc: string | null | undefined): string {
-  if (!utc) return "";
-  return new Date(utc).toLocaleDateString("en-CA");
+  return formatDateAmsterdam(utc, "");
 }
 
 interface HistoryItem {
@@ -13,10 +13,12 @@ interface HistoryItem {
   requestId: number;
   roles: string[];
   requestedDate: string;
+  requestedDateUtc: string | null;
   status: string;
   comment: string;
   approvedDate?: string;
   deniedDate?: string;
+  cancelledDate?: string;
   revokedDate?: string;
   approver?: string;
   revokedBy?: string;
@@ -37,6 +39,7 @@ function mapRequest(r: UserRequest): HistoryItem {
     requestId: r.RequestId,
     roles,
     requestedDate: formatDate(r.CreatedUtc),
+    requestedDateUtc: r.CreatedUtc ?? null,
     status,
     comment: r.Justification ?? "",
   };
@@ -45,10 +48,16 @@ function mapRequest(r: UserRequest): HistoryItem {
     item.approvedDate = formatDate(r.DecisionUtc ?? r.UpdatedUtc);
     item.approver = r.ApproverName ?? undefined;
   }
+  if (status === "autoapproved") {
+    item.approvedDate = formatDate(r.DecisionUtc ?? r.UpdatedUtc ?? r.CreatedUtc);
+  }
   if (status === "denied") {
     item.deniedDate = formatDate(r.DecisionUtc ?? r.UpdatedUtc);
     item.approver = r.ApproverName ?? undefined;
     item.denialReason = r.DecisionComment ?? undefined;
+  }
+  if (status === "cancelled") {
+    item.cancelledDate = formatDate(r.UpdatedUtc);
   }
   if (status === "revoked") {
     item.revokedDate = formatDate(r.UpdatedUtc);
@@ -81,10 +90,14 @@ export function UserHistory() {
     switch (status) {
       case "approved":
         return <CheckCircle className="h-5 w-5 text-green-500" />;
+      case "autoapproved":
+        return <Zap className="h-5 w-5 text-blue-500" />;
       case "denied":
         return <XCircle className="h-5 w-5 text-red-500" />;
       case "pending":
         return <Clock className="h-5 w-5 text-orange-500" />;
+      case "cancelled":
+        return <Ban className="h-5 w-5 text-gray-500" />;
       case "revoked":
         return <RotateCcw className="h-5 w-5 text-gray-500" />;
       default:
@@ -96,10 +109,14 @@ export function UserHistory() {
     switch (status) {
       case "approved":
         return "bg-green-500/10 text-green-600 dark:text-green-400";
+      case "autoapproved":
+        return "bg-blue-500/10 text-blue-600 dark:text-blue-400";
       case "denied":
         return "bg-red-500/10 text-red-600 dark:text-red-400";
       case "pending":
         return "bg-orange-500/10 text-orange-600 dark:text-orange-400";
+      case "cancelled":
+        return "bg-gray-500/10 text-gray-600 dark:text-gray-400";
       case "revoked":
         return "bg-gray-500/10 text-gray-600 dark:text-gray-400";
       default:
@@ -107,14 +124,18 @@ export function UserHistory() {
     }
   };
 
-  const getStatusLabel = (status: string) => status.charAt(0).toUpperCase() + status.slice(1);
+  const getStatusLabel = (status: string) => {
+    if (status === "autoapproved") return "Auto Approved";
+    return status.charAt(0).toUpperCase() + status.slice(1);
+  };
 
   const filterByTimePeriod = (items: HistoryItem[]) => {
     if (timePeriodFilter === "all") return items;
     const today = new Date();
     const daysToFilter = parseInt(timePeriodFilter);
     return items.filter((item) => {
-      const requestDate = new Date(item.requestedDate);
+      const requestDate = parseUtcLike(item.requestedDateUtc);
+      if (!requestDate) return false;
       const diffDays = Math.ceil((today.getTime() - requestDate.getTime()) / (1000 * 60 * 60 * 24));
       return diffDays <= daysToFilter;
     });
@@ -152,8 +173,9 @@ export function UserHistory() {
           <option value="all">All Status</option>
           <option value="pending">Pending</option>
           <option value="approved">Approved</option>
+          <option value="autoapproved">Auto Approved</option>
           <option value="denied">Denied</option>
-          <option value="revoked">Revoked</option>
+          <option value="cancelled">Cancelled</option>
         </select>
         <select
           value={timePeriodFilter}
@@ -224,12 +246,30 @@ export function UserHistory() {
                     </div>
                   )}
 
-                  {item.status === "denied" && item.denialReason && (
+                  {item.status === "autoapproved" && (
+                    <div className="mt-2 rounded-lg bg-blue-500/10 p-2">
+                      <p className="text-xs text-muted-foreground">
+                        Auto-approved{item.approvedDate ? ` on ${item.approvedDate}` : ""}
+                      </p>
+                    </div>
+                  )}
+
+                  {item.status === "denied" && (
                     <div className="mt-2 rounded-lg bg-red-500/10 p-2">
                       <p className="text-xs text-muted-foreground">
                         Denied{item.approver ? ` by ${item.approver}` : ""}{item.deniedDate ? ` on ${item.deniedDate}` : ""}
                       </p>
-                      <p className="mt-1 text-xs text-red-600 dark:text-red-400 line-clamp-2">{item.denialReason}</p>
+                      {item.denialReason && (
+                        <p className="mt-1 text-xs text-red-600 dark:text-red-400 line-clamp-2">{item.denialReason}</p>
+                      )}
+                    </div>
+                  )}
+
+                  {item.status === "cancelled" && (
+                    <div className="mt-2 rounded-lg bg-gray-500/10 p-2">
+                      <p className="text-xs text-muted-foreground">
+                        Cancelled{item.cancelledDate ? ` on ${item.cancelledDate}` : ""}
+                      </p>
                     </div>
                   )}
 

@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
-import { Moon, Sun, Shield, Users, Key, Activity, FileText, Search, ChevronRight, UserCircle, Clock, Send, CheckCircle } from "lucide-react";
+import { Moon, Sun, Shield, Users, Key, Activity, FileText, Search, ChevronRight, UserCircle, Clock, Send, CheckCircle, type LucideIcon } from "lucide-react";
 
 // User components
 import { UserOverview } from "./components/user/UserOverview";
@@ -19,12 +19,62 @@ import { MyActiveRoles } from "./components/shared/MyActiveRoles";
 import { useAuth } from "@/contexts/AuthContext";
 import { fetchPendingApprovals } from "@/api/endpoints";
 
+type SubNavItem = { id: string; label: string; route: string };
+type NavItem = { id: string; label: string; icon: LucideIcon; route?: string; submenu?: SubNavItem[] };
+
 export default function App() {
   const { user, userRole, canApprove, canManage, isLoading, error } = useAuth();
   const [darkMode, setDarkMode] = useState(false);
-  const [activeTab, setActiveTab] = useState("overview");
+  const [currentPath, setCurrentPath] = useState(() => window.location.pathname || "/");
   const [myAccessOpen, setMyAccessOpen] = useState(false);
   const [pendingApprovalsCount, setPendingApprovalsCount] = useState(0);
+
+  const getDefaultPath = () => "/overview";
+
+  const allowedPaths = useMemo(() => {
+    if (canManage) {
+      const paths = [
+        "/overview",
+        "/my-active-roles",
+        "/my-request-access",
+        "/my-history",
+        "/manage-roles",
+        "/manage-teams",
+        "/manage-users",
+        "/audit",
+      ];
+      if (canApprove) paths.push("/approvals");
+      return new Set(paths);
+    }
+
+    const paths = ["/overview", "/request-access", "/history"];
+    if (canApprove) paths.push("/approvals");
+    return new Set(paths);
+  }, [canApprove, canManage]);
+
+  const navigate = (path: string) => {
+    if (path === currentPath) return;
+    window.history.pushState({}, "", path);
+    setCurrentPath(path);
+  };
+
+  useEffect(() => {
+    const onPop = () => setCurrentPath(window.location.pathname || "/");
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+
+  useEffect(() => {
+    if (isLoading || error) return;
+    const raw = window.location.pathname || "/";
+    const normalized = raw === "/" ? getDefaultPath() : raw;
+    const target = allowedPaths.has(normalized) ? normalized : getDefaultPath();
+    if (target !== raw) {
+      window.history.replaceState({}, "", target);
+    }
+    setCurrentPath(target);
+    setMyAccessOpen(target.startsWith("/my-"));
+  }, [allowedPaths, error, isLoading]);
 
   // Load pending approvals count for badge
   useEffect(() => {
@@ -41,41 +91,41 @@ export default function App() {
     setDarkMode(!darkMode);
   };
 
-  const navItems = useMemo(() => {
+  const navItems: NavItem[] = useMemo(() => {
     if (canManage) {
       return [
-        { id: "overview", label: "Overview", icon: Activity },
+        { id: "overview", label: "Overview", icon: Activity, route: "/overview" },
         {
           id: "my-access",
           label: "My Access",
           icon: UserCircle,
           submenu: [
-            { id: "my-active-roles", label: "My Active Roles" },
-            { id: "my-request-access", label: "Request Access" },
-            { id: "my-history", label: "My History" },
+            { id: "my-active-roles", label: "My Active Roles", route: "/my-active-roles" },
+            { id: "my-request-access", label: "Request Access", route: "/my-request-access" },
+            { id: "my-history", label: "My History", route: "/my-history" },
           ],
         },
-        ...(canApprove ? [{ id: "approvals", label: "Approvals", icon: CheckCircle, submenu: undefined }] : []),
-        { id: "manage-roles", label: "Manage Roles", icon: Key, submenu: undefined },
-        { id: "manage-teams", label: "Manage Teams", icon: Users, submenu: undefined },
-        { id: "manage-users", label: "Manage Users", icon: Users, submenu: undefined },
-        { id: "audit", label: "Audit Logs", icon: FileText, submenu: undefined },
+        ...(canApprove ? [{ id: "approvals", label: "Approvals", icon: CheckCircle, route: "/approvals", submenu: undefined }] : []),
+        { id: "manage-roles", label: "Manage Roles", icon: Key, route: "/manage-roles", submenu: undefined },
+        { id: "manage-teams", label: "Manage Teams", icon: Users, route: "/manage-teams", submenu: undefined },
+        { id: "manage-users", label: "Manage Users", icon: Users, route: "/manage-users", submenu: undefined },
+        { id: "audit", label: "Audit Logs", icon: FileText, route: "/audit", submenu: undefined },
       ];
     }
 
     if (canApprove) {
       return [
-        { id: "overview", label: "Overview", icon: Activity, submenu: undefined },
-        { id: "request-access", label: "Request Access", icon: Send, submenu: undefined },
-        { id: "approvals", label: "Approvals", icon: CheckCircle, submenu: undefined },
-        { id: "history", label: "History", icon: Clock, submenu: undefined },
+        { id: "overview", label: "Overview", icon: Activity, route: "/overview", submenu: undefined },
+        { id: "request-access", label: "Request Access", icon: Send, route: "/request-access", submenu: undefined },
+        { id: "approvals", label: "Approvals", icon: CheckCircle, route: "/approvals", submenu: undefined },
+        { id: "history", label: "History", icon: Clock, route: "/history", submenu: undefined },
       ];
     }
 
     return [
-      { id: "overview", label: "Overview", icon: Activity, submenu: undefined },
-      { id: "request-access", label: "Request Access", icon: Send, submenu: undefined },
-      { id: "history", label: "History", icon: Clock, submenu: undefined },
+      { id: "overview", label: "Overview", icon: Activity, route: "/overview", submenu: undefined },
+      { id: "request-access", label: "Request Access", icon: Send, route: "/request-access", submenu: undefined },
+      { id: "history", label: "History", icon: Clock, route: "/history", submenu: undefined },
     ];
   }, [canApprove, canManage]);
 
@@ -98,14 +148,13 @@ export default function App() {
     return { name, initials, role: roleLabel };
   };
 
-  const handleTabClick = (tabId: string) => {
-    if (tabId === "my-access") {
+  const handleTabClick = (tab: NavItem) => {
+    if (tab.id === "my-access") {
       setMyAccessOpen(!myAccessOpen);
-    } else {
-      setActiveTab(tabId);
-      if (!tabId.startsWith("my-")) {
-        setMyAccessOpen(false);
-      }
+    } else if (tab.route) {
+      navigate(tab.route);
+      } else {
+      setMyAccessOpen(false);
     }
   };
 
@@ -180,15 +229,15 @@ export default function App() {
                 {navItems.map((tab) => {
                   const Icon = tab.icon;
                   const isActive = tab.submenu
-                    ? tab.submenu.some((sub) => sub.id === activeTab) || (activeTab === "my-access" && myAccessOpen)
-                    : activeTab === tab.id;
+                    ? tab.submenu.some((sub) => sub.route === currentPath)
+                    : tab.route === currentPath;
 
                   const showBadge = tab.id === "approvals" && pendingApprovalsCount > 0;
 
                   return (
                     <button
                       key={tab.id}
-                      onClick={() => handleTabClick(tab.id)}
+                      onClick={() => handleTabClick(tab)}
                       className={`flex items-center gap-2 border-b-2 px-4 py-3 text-sm transition-colors whitespace-nowrap ${
                         isActive
                           ? "border-primary text-primary"
@@ -216,9 +265,9 @@ export default function App() {
                   {navItems.find((item) => item.id === "my-access")?.submenu?.map((subItem) => (
                     <button
                       key={subItem.id}
-                      onClick={() => setActiveTab(subItem.id)}
+                      onClick={() => navigate(subItem.route)}
                       className={`ml-12 px-4 py-2 text-sm transition-colors ${
-                        activeTab === subItem.id
+                        currentPath === subItem.route
                           ? "text-primary"
                           : "text-muted-foreground hover:text-foreground"
                       }`}
@@ -238,26 +287,32 @@ export default function App() {
             {/* User / Approver Views */}
             {!canManage && (
               <>
-                {activeTab === "overview" && <UserOverview />}
-                {activeTab === "request-access" && <UserRequestAccess />}
-                {activeTab === "approvals" && canApprove && <UserApprovals />}
-                {activeTab === "history" && <UserHistory />}
+                {currentPath === "/overview" && <UserOverview />}
+                {currentPath === "/request-access" && <UserRequestAccess />}
+                {currentPath === "/approvals" && canApprove && <UserApprovals />}
+                {currentPath === "/history" && <UserHistory />}
               </>
             )}
 
             {/* Data Steward & Admin Views */}
             {canManage && (
               <>
-                {activeTab === "overview" && <StewardOverview />}
-                {activeTab === "my-active-roles" && <MyActiveRoles />}
-                {activeTab === "my-request-access" && <UserRequestAccess />}
-                {activeTab === "my-history" && <UserHistory />}
-                {activeTab === "manage-roles" && <ManageRoles />}
-                {activeTab === "approvals" && canApprove && <UserApprovals />}
-                {activeTab === "manage-teams" && <ManageTeams />}
-                {activeTab === "manage-users" && <ManageUsers />}
-                {activeTab === "audit" && <AuditLogs />}
+                {currentPath === "/overview" && <StewardOverview />}
+                {currentPath === "/my-active-roles" && <MyActiveRoles />}
+                {currentPath === "/my-request-access" && <UserRequestAccess />}
+                {currentPath === "/my-history" && <UserHistory />}
+                {currentPath === "/manage-roles" && <ManageRoles />}
+                {currentPath === "/approvals" && canApprove && <UserApprovals />}
+                {currentPath === "/manage-teams" && <ManageTeams />}
+                {currentPath === "/manage-users" && <ManageUsers />}
+                {currentPath === "/audit" && <AuditLogs />}
               </>
+            )}
+
+            {!allowedPaths.has(currentPath) && (
+              <div className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground">
+                This page is not available for your role.
+              </div>
             )}
           </div>
         </main>

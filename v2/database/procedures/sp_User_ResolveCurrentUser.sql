@@ -19,6 +19,7 @@ GO
 
 CREATE PROCEDURE [jit].[sp_User_ResolveCurrentUser]
     @UserId NVARCHAR(255) OUTPUT,
+    @UserContextVersionId BIGINT OUTPUT,
     @LoginName NVARCHAR(255) OUTPUT,
     @DisplayName NVARCHAR(255) OUTPUT,
     @Department NVARCHAR(255) OUTPUT,
@@ -26,7 +27,7 @@ CREATE PROCEDURE [jit].[sp_User_ResolveCurrentUser]
     @JobTitle NVARCHAR(255) OUTPUT,
     @SeniorityLevel INT OUTPUT,
     @IsAdmin BIT OUTPUT,
-    @IsActive BIT OUTPUT
+    @IsEnabled BIT OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -37,6 +38,7 @@ BEGIN
     -- Find existing user (user must exist - no auto-creation)
     SELECT 
         @UserId = UserId,
+        @UserContextVersionId = UserContextVersionId,
         @LoginName = LoginName,
         @DisplayName = DisplayName,
         @Department = Department,
@@ -44,15 +46,16 @@ BEGIN
         @JobTitle = JobTitle,
         @SeniorityLevel = SeniorityLevel,
         @IsAdmin = IsAdmin,
-        @IsActive = IsActive
-    FROM [jit].[Users]
+        @IsEnabled = IsEnabled
+    FROM [jit].[vw_User_CurrentContext]
     WHERE LoginName = @CurrentLogin
-    AND IsActive = 1;
+    AND IsEnabled = 1;
     
     -- If user doesn't exist, return NULL values (user must be created manually or via AD sync)
     IF @UserId IS NULL
     BEGIN
         SET @UserId = NULL;
+        SET @UserContextVersionId = NULL;
         SET @LoginName = @CurrentLogin;
         SET @DisplayName = @CurrentUser;
         SET @Department = NULL;
@@ -60,7 +63,7 @@ BEGIN
         SET @JobTitle = NULL;
         SET @SeniorityLevel = NULL;
         SET @IsAdmin = 0;
-        SET @IsActive = 0;
+        SET @IsEnabled = 0;
     END
 END
 GO

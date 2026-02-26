@@ -20,6 +20,7 @@ CREATE TABLE [jit].[Grants](
     [GrantId] [bigint] IDENTITY(1,1) NOT NULL,
     [RequestId] [bigint] NULL,
     [UserId] [nvarchar](255) NOT NULL,
+    [UserContextVersionId] [bigint] NULL,
     [RoleId] [int] NOT NULL,
     [RoleVersionId] [bigint] NULL,
     [ValidFromUtc] [datetime2](7) NOT NULL,
@@ -28,6 +29,7 @@ CREATE TABLE [jit].[Grants](
     [RevokeReason] [nvarchar](max) NULL,
     [ConfigSnapshotJson] [nvarchar](max) NULL,
     [IssuedByUserId] [nvarchar](255) NULL,
+    [IssuedByUserContextVersionId] [bigint] NULL,
     [Status] [nvarchar](50) NOT NULL,
     CONSTRAINT [PK_Grants] PRIMARY KEY CLUSTERED ([GrantId] ASC)
     WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
@@ -43,12 +45,22 @@ ALTER TABLE [jit].[Grants] WITH CHECK ADD CONSTRAINT [FK_Grants_Users]
 
 ALTER TABLE [jit].[Grants] CHECK CONSTRAINT [FK_Grants_Users]
 
+ALTER TABLE [jit].[Grants] WITH CHECK ADD CONSTRAINT [FK_Grants_UserContextVersions]
+    FOREIGN KEY([UserContextVersionId]) REFERENCES [jit].[User_Context_Versions] ([UserContextVersionId])
+
+ALTER TABLE [jit].[Grants] CHECK CONSTRAINT [FK_Grants_UserContextVersions]
+
 CREATE INDEX [IX_Grants_RoleVersionId] ON [jit].[Grants]([RoleVersionId]);
 
 ALTER TABLE [jit].[Grants] WITH CHECK ADD CONSTRAINT [FK_Grants_IssuedByUsers] 
     FOREIGN KEY([IssuedByUserId]) REFERENCES [jit].[Users] ([UserId])
 
 ALTER TABLE [jit].[Grants] CHECK CONSTRAINT [FK_Grants_IssuedByUsers]
+
+ALTER TABLE [jit].[Grants] WITH CHECK ADD CONSTRAINT [FK_Grants_IssuedByUserContextVersions]
+    FOREIGN KEY([IssuedByUserContextVersionId]) REFERENCES [jit].[User_Context_Versions] ([UserContextVersionId])
+
+ALTER TABLE [jit].[Grants] CHECK CONSTRAINT [FK_Grants_IssuedByUserContextVersions]
 
 CREATE NONCLUSTERED INDEX [IX_Grants_UserId_RoleId_Status_ValidToUtc] ON [jit].[Grants]([UserId] ASC, [RoleId] ASC, [Status] ASC, [ValidToUtc] ASC)
     WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
@@ -58,6 +70,12 @@ CREATE NONCLUSTERED INDEX [IX_Grants_Status_ValidToUtc] ON [jit].[Grants]([Statu
     WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 
 CREATE NONCLUSTERED INDEX [IX_Grants_RequestId] ON [jit].[Grants]([RequestId] ASC)
+    WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
+
+CREATE NONCLUSTERED INDEX [IX_Grants_UserContextVersionId] ON [jit].[Grants]([UserContextVersionId] ASC)
+    WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
+
+CREATE NONCLUSTERED INDEX [IX_Grants_IssuedByUserContextVersionId] ON [jit].[Grants]([IssuedByUserContextVersionId] ASC)
     WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 
 GO

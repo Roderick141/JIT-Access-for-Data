@@ -38,12 +38,13 @@ def get_current_user(x_remote_user: str | None = Header(default=None, alias="X-R
     search_pattern = f"%\\{windows_username}"
     rows = execute_query(
         """
-        SELECT UserId, LoginName, GivenName, Surname, DisplayName,
-               Email, Division, Department, JobTitle, SeniorityLevel,
-               IsAdmin, IsApprover, IsDataSteward, IsActive
-        FROM jit.Users
+         SELECT UserId, UserContextVersionId, LoginName, GivenName, Surname, DisplayName,
+             Email, Division, Department, JobTitle, SeniorityLevel,
+             IsAdmin, IsApprover, IsDataSteward, IsEnabled, IsActive
+         FROM jit.vw_User_CurrentContext
         WHERE (LoginName = ? OR LoginName LIKE ? OR LoginName = ?)
-          AND IsActive = 1
+           AND IsEnabled = 1
+           AND IsActive = 1
         """,
         [windows_username, search_pattern, windows_username],
     )

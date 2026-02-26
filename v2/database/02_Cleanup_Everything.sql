@@ -133,6 +133,12 @@ PRINT 'Step 2: Dropping Tables'
 PRINT '========================================'
 PRINT ''
 
+-- Drop view first because it depends on Users and User_Context_Versions
+IF EXISTS (SELECT * FROM sys.views WHERE object_id = OBJECT_ID(N'[jit].[vw_User_CurrentContext]'))
+    DROP VIEW [jit].[vw_User_CurrentContext]
+GO
+PRINT 'Dropped: vw_User_CurrentContext'
+
 -- Drop tables in reverse dependency order (respecting foreign key dependencies)
 -- Start with tables that have foreign keys pointing to other tables
 
@@ -211,6 +217,11 @@ IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[jit].[Roles]
     DROP TABLE [jit].[Roles]
 GO
 PRINT 'Dropped: Roles'
+
+IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[jit].[User_Context_Versions]') AND type in (N'U'))
+    DROP TABLE [jit].[User_Context_Versions]
+GO
+PRINT 'Dropped: User_Context_Versions'
 
 -- Level 12: Users table (referenced by many tables, must be dropped last)
 IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[jit].[Users]') AND type in (N'U'))

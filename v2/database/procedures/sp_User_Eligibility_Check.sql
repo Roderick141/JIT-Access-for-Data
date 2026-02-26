@@ -34,7 +34,7 @@ BEGIN
     SELECT 
         @UserDivision = Division,
         @UserDepartment = Department
-    FROM [jit].[Users]
+    FROM [jit].[vw_User_CurrentContext]
     WHERE UserId = @UserId;
     
     -- Priority 1: Check explicit user overrides (highest priority)

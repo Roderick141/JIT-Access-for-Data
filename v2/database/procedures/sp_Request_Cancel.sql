@@ -25,14 +25,29 @@ BEGIN
     
     DECLARE @CurrentUser NVARCHAR(255) = SUSER_SNAME();
     DECLARE @CurrentStatus NVARCHAR(50);
+    DECLARE @RequesterUserContextVersionId BIGINT;
     
     BEGIN TRY
         BEGIN TRANSACTION;
         
         -- Check request belongs to user and is cancellable
-        SELECT @CurrentStatus = Status
+        SELECT 
+            @CurrentStatus = Status,
+            @RequesterUserContextVersionId = UserContextVersionId
         FROM [jit].[Requests]
         WHERE RequestId = @RequestId AND UserId = @UserId;
+
+        IF @RequesterUserContextVersionId IS NULL
+        BEGIN
+            SELECT @RequesterUserContextVersionId = UserContextVersionId
+            FROM [jit].[vw_User_CurrentContext]
+            WHERE UserId = @UserId;
+        END
+
+        IF @RequesterUserContextVersionId IS NULL
+        BEGIN
+            THROW 50008, 'Requester has no active context version', 1;
+        END
         
         IF @CurrentStatus IS NULL
         BEGIN
@@ -51,8 +66,40 @@ BEGIN
         WHERE RequestId = @RequestId;
         
         -- Log audit
-        INSERT INTO [jit].[AuditLog] (EventType, ActorUserId, ActorLoginName, TargetUserId, RequestId, DetailsJson)
-        VALUES ('RequestCancelled', @UserId, @CurrentUser, @UserId, @RequestId, '{}');
+        DECLARE @CancelledRoleNames NVARCHAR(MAX) = (
+            SELECT STRING_AGG(r.RoleName, ', ')
+            FROM [jit].[Request_Roles] rr
+            INNER JOIN [jit].[Roles] r ON r.RoleId = rr.RoleId AND r.IsActive = 1
+            WHERE rr.RequestId = @RequestId
+        );
+        DECLARE @CancelledRoleIds NVARCHAR(MAX) = (
+            SELECT STRING_AGG(CAST(rr.RoleId AS NVARCHAR(20)), ',')
+            FROM [jit].[Request_Roles] rr
+            WHERE rr.RequestId = @RequestId
+        );
+        DECLARE @CancelDetailsJson NVARCHAR(MAX) =
+            '{"RoleIds":[' + ISNULL(@CancelledRoleIds, '') + '],' +
+            '"RoleNames":"' + ISNULL(REPLACE(@CancelledRoleNames, '"', '""'), '') + '"}';
+        INSERT INTO [jit].[AuditLog] (
+            EventType,
+            ActorUserId,
+            ActorUserContextVersionId,
+            ActorLoginName,
+            TargetUserId,
+            TargetUserContextVersionId,
+            RequestId,
+            DetailsJson
+        )
+        VALUES (
+            'RequestCancelled',
+            @UserId,
+            @RequesterUserContextVersionId,
+            @CurrentUser,
+            @UserId,
+            @RequesterUserContextVersionId,
+            @RequestId,
+            @CancelDetailsJson
+        );
         
         COMMIT TRANSACTION;
         

@@ -35,6 +35,7 @@ BEGIN
     DECLARE @UserDept NVARCHAR(255);
     DECLARE @UserTitle NVARCHAR(255);
     DECLARE @UserDivision NVARCHAR(255);
+    DECLARE @UserContextVersionId BIGINT;
     DECLARE @CanRequest BIT;
     DECLARE @EligibilityReason NVARCHAR(255);
     DECLARE @EligibilitySnapshotJson NVARCHAR(MAX);
@@ -84,9 +85,16 @@ BEGIN
             @UserSeniorityLevel = SeniorityLevel,
             @UserDept = Department,
             @UserTitle = JobTitle,
-            @UserDivision = Division
-        FROM [jit].[Users]
-        WHERE UserId = @UserId;
+            @UserDivision = Division,
+            @UserContextVersionId = UserContextVersionId
+        FROM [jit].[vw_User_CurrentContext]
+        WHERE UserId = @UserId
+          AND IsEnabled = 1;
+
+        IF @UserContextVersionId IS NULL
+        BEGIN
+            THROW 50008, 'User is not enabled or has no active context version', 1;
+        END
         
         -- Validate all roles exist and are enabled, and resolve their eligibility rule parameters
         INSERT INTO #ResolvedRoles (RoleId, RoleName, MaxDurationMinutes, RequiresJustification, RequiresApproval, MinSeniorityLevel)
@@ -294,11 +302,11 @@ BEGIN
 
         -- Create request
         INSERT INTO [jit].[Requests] (
-            UserId, RequestedDurationMinutes, Justification, TicketRef,
+            UserId, UserContextVersionId, RequestedDurationMinutes, Justification, TicketRef,
             Status, UserDeptSnapshot, UserTitleSnapshot, EligibilitySnapshotJson, CreatedBy
         )
         VALUES (
-            @UserId, @RequestedDurationMinutes, @Justification, @TicketRef,
+            @UserId, @UserContextVersionId, @RequestedDurationMinutes, @Justification, @TicketRef,
             @Status, @UserDept, @UserTitle, @EligibilitySnapshotJson, @CurrentUser
         );
         
@@ -309,16 +317,41 @@ BEGIN
         SELECT @RequestId, RoleId FROM #RoleIds;
         
         -- Audit log
+        DECLARE @RoleNames NVARCHAR(MAX) = (
+            SELECT STRING_AGG(RoleName, ', ') FROM #ResolvedRoles
+        );
+
         DECLARE @DetailsJson NVARCHAR(MAX) = 
             '{"RoleIds":[' + 
             (SELECT STRING_AGG(CAST(RoleId AS NVARCHAR(10)), ',') FROM #RoleIds) + 
-            '],"Status":"' + @Status + '"';
+            '],"RoleNames":"' + ISNULL(REPLACE(@RoleNames, '"', '""'), '') +
+            '","Status":"' + @Status +
+            '","RequestedDurationMinutes":' + CAST(@RequestedDurationMinutes AS NVARCHAR(20)) +
+            ',"TicketRef":"' + ISNULL(REPLACE(@TicketRef, '"', '""'), '') + '"';
         IF @AutoApproveReason IS NOT NULL
             SET @DetailsJson = @DetailsJson + ',"AutoApproveReason":"' + @AutoApproveReason + '"';
         SET @DetailsJson = @DetailsJson + '}';
         
-        INSERT INTO [jit].[AuditLog] (EventType, ActorUserId, ActorLoginName, TargetUserId, RequestId, DetailsJson)
-        VALUES ('RequestCreated', @UserId, @CurrentUser, @UserId, @RequestId, @DetailsJson);
+        INSERT INTO [jit].[AuditLog] (
+            EventType,
+            ActorUserId,
+            ActorUserContextVersionId,
+            ActorLoginName,
+            TargetUserId,
+            TargetUserContextVersionId,
+            RequestId,
+            DetailsJson
+        )
+        VALUES (
+            'RequestCreated',
+            @UserId,
+            @UserContextVersionId,
+            @CurrentUser,
+            @UserId,
+            @UserContextVersionId,
+            @RequestId,
+            @DetailsJson
+        );
         
         -- If auto-approved, create grants immediately
         IF @AutoApprove = 1
@@ -336,10 +369,12 @@ BEGIN
                 EXEC [jit].[sp_Grant_Issue]
                     @RequestId = @RequestId,
                     @UserId = @UserId,
+                    @UserContextVersionId = @UserContextVersionId,
                     @RoleId = @CurrentRoleId,
                     @ValidFromUtc = @GrantValidFromUtc,
                     @ValidToUtc = @GrantValidToUtc,
                     @IssuedByUserId = @UserId,
+                    @IssuedByUserContextVersionId = @UserContextVersionId,
                     @GrantId = @GrantId OUTPUT;
                 
                 FETCH NEXT FROM grant_cursor INTO @CurrentRoleId;

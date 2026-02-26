@@ -12,6 +12,7 @@ PRINT '========================================'
 PRINT ''
 
 -- Ensure reruns are clean: drop tables in reverse dependency order first.
+IF OBJECT_ID(N'[jit].[vw_User_CurrentContext]', N'V') IS NOT NULL DROP VIEW [jit].[vw_User_CurrentContext];
 IF OBJECT_ID(N'[jit].[AuditLog]', N'U') IS NOT NULL DROP TABLE [jit].[AuditLog];
 IF OBJECT_ID(N'[jit].[Grant_DBRole_Assignments]', N'U') IS NOT NULL DROP TABLE [jit].[Grant_DBRole_Assignments];
 IF OBJECT_ID(N'[jit].[Approvals]', N'U') IS NOT NULL DROP TABLE [jit].[Approvals];
@@ -25,6 +26,7 @@ IF OBJECT_ID(N'[jit].[Role_To_DB_Roles]', N'U') IS NOT NULL DROP TABLE [jit].[Ro
 IF OBJECT_ID(N'[jit].[DB_Roles]', N'U') IS NOT NULL DROP TABLE [jit].[DB_Roles];
 IF OBJECT_ID(N'[jit].[Teams]', N'U') IS NOT NULL DROP TABLE [jit].[Teams];
 IF OBJECT_ID(N'[jit].[Roles]', N'U') IS NOT NULL DROP TABLE [jit].[Roles];
+IF OBJECT_ID(N'[jit].[User_Context_Versions]', N'U') IS NOT NULL DROP TABLE [jit].[User_Context_Versions];
 IF OBJECT_ID(N'[jit].[Users]', N'U') IS NOT NULL DROP TABLE [jit].[Users];
 GO
 
@@ -33,6 +35,7 @@ GO
 
 -- Core identity and role tables (must be created first)
 :r ./schema/01_Create_Users.sql
+:r ./schema/01b_Create_User_Context_Versions.sql
 :r ./schema/02_Create_Roles.sql
 :r ./schema/03_Create_DB_Roles.sql
 :r ./schema/04_Create_Role_To_DB_Roles.sql

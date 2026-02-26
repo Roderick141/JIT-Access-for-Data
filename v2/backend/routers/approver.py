@@ -26,7 +26,7 @@ def request_detail(request_id: int, user=Depends(get_current_user)):
             u.Email AS RequesterEmail, u.Department AS RequesterDepartment,
             u.Division AS RequesterDivision, u.SeniorityLevel AS RequesterSeniority
         FROM jit.Requests r
-        INNER JOIN jit.Users u ON u.UserId = r.UserId
+        INNER JOIN jit.vw_User_CurrentContext u ON u.UserId = r.UserId
         WHERE r.RequestId = ?
         """,
         [request_id],
