@@ -25,7 +25,6 @@ BEGIN
     
     DECLARE @ApproverDivision NVARCHAR(255);
     DECLARE @ApproverDepartment NVARCHAR(255);
-    DECLARE @ApproverSeniority INT;
     DECLARE @ApproverIsAdmin BIT;
     DECLARE @ApproverIsDataSteward BIT;
     DECLARE @ApproverIsApprover BIT;
@@ -36,7 +35,6 @@ BEGIN
     SELECT 
         @ApproverDivision = Division,
         @ApproverDepartment = Department,
-        @ApproverSeniority = SeniorityLevel,
         @ApproverIsAdmin = IsAdmin,
         @ApproverIsDataSteward = IsDataSteward,
         @ApproverIsApprover = IsApprover
@@ -57,7 +55,6 @@ BEGIN
                      AND @ApproverDivision IS NOT NULL
                      AND u.Division IS NOT NULL
                      AND @ApproverDivision = u.Division
-                     AND (@ApproverSeniority IS NULL OR u.SeniorityLevel IS NULL OR @ApproverSeniority >= u.SeniorityLevel)
                      AND NOT EXISTS (
                          SELECT 1
                          FROM [jit].[Request_Roles] rr2
@@ -147,7 +144,6 @@ BEGIN
         u.Email AS RequesterEmail,
         u.Department AS RequesterDepartment,
         u.Division AS RequesterDivision,
-        u.SeniorityLevel AS RequesterSeniority,
         STRING_AGG(rol.RoleName, ', ') AS RoleNames,
         MAX(rol.SensitivityLevel) AS SensitivityLevel,
         COUNT(rr.RoleId) AS RoleCount,
@@ -177,7 +173,7 @@ BEGIN
       AND u.IsEnabled = 1
       AND re.CanApproveRequest = 1
     GROUP BY r.RequestId, r.UserId, u.DisplayName, u.LoginName, u.Email, u.Department, u.Division, 
-             u.SeniorityLevel, r.RequestedDurationMinutes, r.Justification, r.TicketRef,
+                         r.RequestedDurationMinutes, r.Justification, r.TicketRef,
              r.UserDeptSnapshot, r.UserTitleSnapshot, r.CreatedUtc, r.Status, re.CanApproveRequest
     ORDER BY r.CreatedUtc ASC;
 END

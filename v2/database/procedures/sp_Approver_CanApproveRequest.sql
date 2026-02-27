@@ -1,7 +1,6 @@
 -- =============================================
 -- Stored Procedure: jit.sp_Approver_CanApproveRequest
 -- Checks if an approver can approve a specific request
--- Uses combined division + seniority logic
 -- Now checks ALL roles in the request - approver must be able to approve EVERY role
 -- =============================================
 
@@ -28,12 +27,10 @@ BEGIN
     
     DECLARE @RequesterUserId NVARCHAR(255);
     DECLARE @ApproverDivision NVARCHAR(255);
-    DECLARE @ApproverSeniority INT;
     DECLARE @ApproverIsAdmin BIT;
     DECLARE @ApproverIsDataSteward BIT;
     DECLARE @ApproverIsApprover BIT;
     DECLARE @RequesterDivision NVARCHAR(255);
-    DECLARE @RequesterSeniority INT;
     
     -- Get request details
     SELECT @RequesterUserId = UserId
@@ -50,7 +47,6 @@ BEGIN
     -- Get approver details
     SELECT 
         @ApproverDivision = Division,
-        @ApproverSeniority = SeniorityLevel,
         @ApproverIsAdmin = IsAdmin,
         @ApproverIsDataSteward = IsDataSteward,
         @ApproverIsApprover = IsApprover
@@ -60,8 +56,7 @@ BEGIN
     
     -- Get requester details
     SELECT 
-        @RequesterDivision = Division,
-        @RequesterSeniority = SeniorityLevel
+        @RequesterDivision = Division
     FROM [jit].[vw_User_CurrentContext]
     WHERE UserId = @RequesterUserId;
     
@@ -99,11 +94,11 @@ BEGIN
         END
     END
     
-    -- Check 3: IsApprover - approver must be able to request ALL roles AND have higher/equal seniority
+    -- Check 3: IsApprover - approver must be able to request ALL roles
     IF @ApproverIsApprover = 1
     BEGIN
         -- Check if approver can approve ALL roles
-        -- For each role: approver must be able to request it AND have seniority >= requester
+        -- For each role: approver must be able to request it
         DECLARE @CanApproveAllRoles BIT = 1;
         DECLARE @RoleId INT;
         DECLARE @CanRequestRole BIT;
@@ -127,11 +122,8 @@ BEGIN
                 @CanRequest = @CanRequestRole OUTPUT,
                 @EligibilityReason = @EligibilityReason OUTPUT;
             
-            -- Approver can approve this role if:
-            -- 1. They can request it themselves
-            -- 2. Their seniority >= requester's seniority
-            IF @CanRequestRole = 1
-               AND (@ApproverSeniority IS NULL OR @RequesterSeniority IS NULL OR @ApproverSeniority >= @RequesterSeniority)
+                -- Approver can approve this role if they can request it themselves
+                IF @CanRequestRole = 1
             BEGIN
                 -- role is approvable, continue
                 SET @CanApproveAllRoles = @CanApproveAllRoles;

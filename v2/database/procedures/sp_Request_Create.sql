@@ -31,7 +31,6 @@ BEGIN
     DECLARE @CurrentUtc DATETIME2 = GETUTCDATE();
     DECLARE @RequestId BIGINT;
     DECLARE @Status NVARCHAR(50);
-    DECLARE @UserSeniorityLevel INT;
     DECLARE @UserDept NVARCHAR(255);
     DECLARE @UserTitle NVARCHAR(255);
     DECLARE @UserDivision NVARCHAR(255);
@@ -48,8 +47,7 @@ BEGIN
         RoleName NVARCHAR(255),
         MaxDurationMinutes INT,
         RequiresJustification BIT,
-        RequiresApproval BIT,
-        MinSeniorityLevel INT NULL
+        RequiresApproval BIT
     );
     
     BEGIN TRY
@@ -82,7 +80,6 @@ BEGIN
         
         -- Get user details
         SELECT 
-            @UserSeniorityLevel = SeniorityLevel,
             @UserDept = Department,
             @UserTitle = JobTitle,
             @UserDivision = Division,
@@ -97,22 +94,20 @@ BEGIN
         END
         
         -- Validate all roles exist and are enabled, and resolve their eligibility rule parameters
-        INSERT INTO #ResolvedRoles (RoleId, RoleName, MaxDurationMinutes, RequiresJustification, RequiresApproval, MinSeniorityLevel)
+        INSERT INTO #ResolvedRoles (RoleId, RoleName, MaxDurationMinutes, RequiresJustification, RequiresApproval)
         SELECT
             r.RoleId,
             r.RoleName,
             matchedRule.MaxDurationMinutes,
             matchedRule.RequiresJustification,
-            matchedRule.RequiresApproval,
-            matchedRule.MinSeniorityLevel
+            matchedRule.RequiresApproval
         FROM [jit].[Roles] r
         INNER JOIN #RoleIds rid ON r.RoleId = rid.RoleId
         CROSS APPLY (
             SELECT TOP 1
                 rer.MaxDurationMinutes,
                 rer.RequiresJustification,
-                rer.RequiresApproval,
-                rer.MinSeniorityLevel
+                rer.RequiresApproval
             FROM [jit].[Role_Eligibility_Rules] rer
             LEFT JOIN [jit].[User_Teams] ut
                 ON rer.ScopeType = 'Team'
@@ -265,17 +260,6 @@ BEGIN
         BEGIN
             SET @AutoApprove = 1;
             SET @AutoApproveReason = 'PreApprovedRole';
-            SET @Status = 'AutoApproved';
-        END
-        -- Seniority bypass: user meets all rules' MinSeniorityLevel thresholds
-        ELSE IF @UserSeniorityLevel IS NOT NULL AND NOT EXISTS (
-            SELECT 1 FROM #ResolvedRoles 
-            WHERE RequiresApproval = 1
-            AND (MinSeniorityLevel IS NULL OR @UserSeniorityLevel < MinSeniorityLevel)
-        )
-        BEGIN
-            SET @AutoApprove = 1;
-            SET @AutoApproveReason = 'SeniorityBypass';
             SET @Status = 'AutoApproved';
         END
         ELSE

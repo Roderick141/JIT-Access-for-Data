@@ -151,16 +151,6 @@ After deployment:
    GRANT SELECT, INSERT, UPDATE, DELETE ON SCHEMA::jit TO [JIT_ServiceAccount];
    ```
 
-3. **Set seniority levels** (for approval system):
-   ```sql
-   UPDATE jit.Users SET SeniorityLevel = 3 WHERE LoginName = 'DOMAIN\user1';
-   ```
-
-4. **Configure roles with seniority thresholds:**
-   ```sql
-   UPDATE jit.Roles SET AutoApproveMinSeniority = 3 WHERE RoleName = 'Advanced Access';
-   ```
-
-5. **Create SQL Agent job** (optional, for automatic grant expiration):
+3. **Create SQL Agent job** (optional, for automatic grant expiration):
    - See `jobs/job_ExpireGrants.sql` for instructions
 

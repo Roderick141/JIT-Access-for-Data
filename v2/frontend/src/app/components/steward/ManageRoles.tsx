@@ -59,7 +59,6 @@ interface EligibilityRule {
   maxDuration: number;
   requiresJustification: boolean;
   requiresApproval: boolean;
-  minimumSeniorityLevel: number;
 }
 
 // ─── Icon helpers ─────────────────────────────────────────────────────────────
@@ -218,7 +217,6 @@ export function ManageRoles() {
     maxDuration: 90,
     requiresJustification: true,
     requiresApproval: true,
-    minimumSeniorityLevel: 1,
   });
 
   // Lookup data for eligibility rule dropdowns
@@ -409,7 +407,6 @@ export function ManageRoles() {
             maxDuration: Math.round(((r.MaxDurationMinutes as number) ?? 1440) / 1440),
             requiresJustification: (r.RequiresJustification as boolean) ?? true,
             requiresApproval: (r.RequiresApproval as boolean) ?? true,
-            minimumSeniorityLevel: (r.MinSeniorityLevel as number) ?? 1,
           };
         })
       );
@@ -433,7 +430,6 @@ export function ManageRoles() {
         scopeValue: r.value || null,
         canRequest: true,
         priority: 0,
-        minSeniorityLevel: r.minimumSeniorityLevel,
         maxDurationMinutes: r.maxDuration * 1440,
         requiresJustification: r.requiresJustification,
         requiresApproval: r.requiresApproval,
@@ -960,7 +956,7 @@ export function ManageRoles() {
                     </div>
                   </div>
                   <div className="flex-1 overflow-y-auto p-2 space-y-1">
-                    {filteredAvailable.map((r) => (
+                    {filteredAvailable.map((r, idx) => (
                       <div
                         key={r}
                         onClick={() => {
@@ -968,10 +964,10 @@ export function ManageRoles() {
                             prev.includes(r) ? prev.filter((x) => x !== r) : [...prev, r]
                           );
                         }}
-                        className={`cursor-pointer rounded px-3 py-2 text-sm transition-colors ${
+                        className={`cursor-pointer rounded border px-3 py-1.5 text-sm transition-colors ${
                           selectedAvailableItems.includes(r)
-                            ? "bg-primary text-primary-foreground"
-                            : "hover:bg-secondary/50 text-card-foreground"
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : `${idx % 2 === 0 ? "bg-card" : "bg-secondary/20"} border-border hover:bg-secondary/50 text-card-foreground`
                         }`}
                       >
                         {r}
@@ -1013,7 +1009,7 @@ export function ManageRoles() {
                     </label>
                   </div>
                   <div className="flex-1 overflow-y-auto p-2 space-y-1">
-                    {selectedDatabaseRoles.map((r) => (
+                    {selectedDatabaseRoles.map((r, idx) => (
                       <div
                         key={r}
                         onClick={() => {
@@ -1021,10 +1017,10 @@ export function ManageRoles() {
                             prev.includes(r) ? prev.filter((x) => x !== r) : [...prev, r]
                           );
                         }}
-                        className={`cursor-pointer rounded px-3 py-2 text-sm transition-colors ${
+                        className={`cursor-pointer rounded border px-3 py-1.5 text-sm transition-colors ${
                           selectedAssignedItems.includes(r)
-                            ? "bg-primary text-primary-foreground"
-                            : "hover:bg-secondary/50 text-card-foreground"
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : `${idx % 2 === 0 ? "bg-card" : "bg-secondary/20"} border-border hover:bg-secondary/50 text-card-foreground`
                         }`}
                       >
                         {r}
@@ -1081,7 +1077,7 @@ export function ManageRoles() {
                       setNewRuleValue("");
                       setNewRuleDisplayName("");
                       setRuleSearchQuery("");
-                      setNewRuleConfig({ maxDuration: 90, requiresJustification: true, requiresApproval: true, minimumSeniorityLevel: 1 });
+                      setNewRuleConfig({ maxDuration: 90, requiresJustification: true, requiresApproval: true });
                     }}
                     className="rounded-lg bg-primary p-1.5 text-primary-foreground hover:bg-primary/90"
                   >
@@ -1106,8 +1102,6 @@ export function ManageRoles() {
                             <p className="text-sm text-card-foreground font-medium truncate">{rule.displayName}</p>
                             <div className="flex flex-wrap gap-1 shrink-0">
                               <span className="text-xs text-muted-foreground">{rule.maxDuration}d</span>
-                              <span className="text-xs text-muted-foreground">•</span>
-                              <span className="text-xs text-muted-foreground">L{rule.minimumSeniorityLevel}+</span>
                               {rule.requiresJustification && (
                                 <><span className="text-xs text-muted-foreground">•</span><span className="rounded bg-blue-500/10 px-1.5 py-0.5 text-xs text-blue-600 dark:text-blue-400">J</span></>
                               )}
@@ -1205,19 +1199,11 @@ export function ManageRoles() {
                           );
                         })()}
                       </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="text-xs text-muted-foreground">Max Duration (days)</label>
-                          <input type="number" value={newRuleConfig.maxDuration}
-                            onChange={(e) => setNewRuleConfig({ ...newRuleConfig, maxDuration: parseInt(e.target.value) || 0 })}
-                            className="mt-1 w-full rounded-lg border border-input bg-input-background p-2 text-sm" />
-                        </div>
-                        <div>
-                          <label className="text-xs text-muted-foreground">Min Seniority Level</label>
-                          <input type="number" value={newRuleConfig.minimumSeniorityLevel}
-                            onChange={(e) => setNewRuleConfig({ ...newRuleConfig, minimumSeniorityLevel: parseInt(e.target.value) || 1 })}
-                            className="mt-1 w-full rounded-lg border border-input bg-input-background p-2 text-sm" />
-                        </div>
+                      <div>
+                        <label className="text-xs text-muted-foreground">Max Duration (days)</label>
+                        <input type="number" value={newRuleConfig.maxDuration}
+                          onChange={(e) => setNewRuleConfig({ ...newRuleConfig, maxDuration: parseInt(e.target.value) || 0 })}
+                          className="mt-1 w-full rounded-lg border border-input bg-input-background p-2 text-sm" />
                       </div>
                       <div className="space-y-2">
                         <label className="flex items-center gap-2">
@@ -1276,13 +1262,6 @@ export function ManageRoles() {
                                 onChange={(e) => setEligibilityRules(eligibilityRules.map((r) => r.id === sr.id ? { ...r, maxDuration: parseInt(e.target.value) || 0 } : r))}
                                 className="mt-1 w-full rounded-lg border border-input bg-input-background p-2 text-sm text-foreground" />
                               <p className="mt-1 text-xs text-muted-foreground">Users can request access for up to {sr.maxDuration} days</p>
-                            </div>
-                            <div>
-                              <label className="text-xs text-muted-foreground">Minimum Seniority Level</label>
-                              <input type="number" value={sr.minimumSeniorityLevel}
-                                onChange={(e) => setEligibilityRules(eligibilityRules.map((r) => r.id === sr.id ? { ...r, minimumSeniorityLevel: parseInt(e.target.value) || 1 } : r))}
-                                className="mt-1 w-full rounded-lg border border-input bg-input-background p-2 text-sm text-foreground" />
-                              <p className="mt-1 text-xs text-muted-foreground">Only users at level {sr.minimumSeniorityLevel}+ can request this role</p>
                             </div>
                             <div className="space-y-2 pt-2">
                               <label className="flex items-center gap-2">

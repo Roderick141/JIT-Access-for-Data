@@ -46,11 +46,11 @@ WHERE RoleName = 'Temporary Query Access' AND IsActive = 1;
 -- Rule 3: Only Data Engineering department can request 'Data Warehouse Reader' (3 days, requires approval)
 INSERT INTO [jit].[Role_Eligibility_Rules] (
     EligibilityRuleId, RoleId, ScopeType, ScopeValue, CanRequest, Priority,
-    MinSeniorityLevel, MaxDurationMinutes, RequiresJustification, RequiresApproval,
+    MaxDurationMinutes, RequiresJustification, RequiresApproval,
     IsActive, ValidFromUtc, CreatedBy, UpdatedBy
 )
 SELECT @NextRuleId + 3, RoleId, 'Department', 'Data Engineering', 1, 20,
-    3, 4320, 1, 1,
+    4320, 1, 1,
     1, GETUTCDATE(), 'SYSTEM', 'SYSTEM'
 FROM [jit].[Roles]
 WHERE RoleName = 'Data Warehouse Reader' AND IsActive = 1;
@@ -58,11 +58,11 @@ WHERE RoleName = 'Data Warehouse Reader' AND IsActive = 1;
 -- Rule 4: Only Data Engineering Team members can request 'Advanced Analytics' (7 days, requires approval)
 INSERT INTO [jit].[Role_Eligibility_Rules] (
     EligibilityRuleId, RoleId, ScopeType, ScopeValue, CanRequest, Priority,
-    MinSeniorityLevel, MaxDurationMinutes, RequiresJustification, RequiresApproval,
+    MaxDurationMinutes, RequiresJustification, RequiresApproval,
     IsActive, ValidFromUtc, CreatedBy, UpdatedBy
 )
 SELECT @NextRuleId + 4, r.RoleId, 'Team', CAST(t.TeamId AS NVARCHAR(255)), 1, 30,
-    3, 10080, 1, 1,
+    10080, 1, 1,
     1, GETUTCDATE(), 'SYSTEM', 'SYSTEM'
 FROM [jit].[Roles] r
 CROSS JOIN [jit].[Teams] t

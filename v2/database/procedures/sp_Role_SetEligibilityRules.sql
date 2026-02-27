@@ -15,7 +15,7 @@ BEGIN
 
     INSERT INTO [jit].[Role_Eligibility_Rules] (
         EligibilityRuleId, RoleId, ScopeType, ScopeValue, CanRequest, Priority,
-        MinSeniorityLevel, MaxDurationMinutes, RequiresJustification, RequiresApproval,
+        MaxDurationMinutes, RequiresJustification, RequiresApproval,
         IsActive, ValidFromUtc, CreatedBy, UpdatedBy
     )
     SELECT
@@ -25,7 +25,6 @@ BEGIN
         j.ScopeValue,
         ISNULL(j.CanRequest, 1),
         ISNULL(j.Priority, 0),
-        j.MinSeniorityLevel,
         ISNULL(j.MaxDurationMinutes, 1440),
         ISNULL(j.RequiresJustification, 1),
         ISNULL(j.RequiresApproval, 1),
@@ -39,7 +38,6 @@ BEGIN
         ScopeValue NVARCHAR(4000) '$.scopeValue',
         CanRequest BIT '$.canRequest',
         Priority INT '$.priority',
-        MinSeniorityLevel INT '$.minSeniorityLevel',
         MaxDurationMinutes INT '$.maxDurationMinutes',
         RequiresJustification BIT '$.requiresJustification',
         RequiresApproval BIT '$.requiresApproval'

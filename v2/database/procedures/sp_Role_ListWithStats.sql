@@ -40,8 +40,7 @@ BEGIN
         SELECT
             u.UserId,
             u.Department,
-            u.Division,
-            u.SeniorityLevel
+            u.Division
         FROM [jit].[vw_User_CurrentContext] u
         WHERE u.IsEnabled = 1
     ),
@@ -75,7 +74,6 @@ BEGIN
                     )
                 )
             )
-            AND (rer.MinSeniorityLevel IS NULL OR ISNULL(u.SeniorityLevel, 0) >= rer.MinSeniorityLevel)
     ),
     OverrideAllow AS (
         SELECT DISTINCT

@@ -17,7 +17,6 @@ BEGIN
     DECLARE @CurrentDivision NVARCHAR(255);
     DECLARE @CurrentDepartment NVARCHAR(255);
     DECLARE @CurrentJobTitle NVARCHAR(255);
-    DECLARE @CurrentSeniorityLevel INT;
     DECLARE @CurrentIsEnabled BIT;
     DECLARE @CurrentIsAdmin BIT;
     DECLARE @CurrentIsApprover BIT;
@@ -27,7 +26,6 @@ BEGIN
         @CurrentDivision = c.Division,
         @CurrentDepartment = c.Department,
         @CurrentJobTitle = c.JobTitle,
-        @CurrentSeniorityLevel = c.SeniorityLevel,
         @CurrentIsEnabled = c.IsEnabled,
         @CurrentIsAdmin = c.IsAdmin,
         @CurrentIsApprover = c.IsApprover,
@@ -44,7 +42,6 @@ BEGIN
             Division,
             Department,
             JobTitle,
-            SeniorityLevel,
             IsAdmin,
             IsApprover,
             IsDataSteward,
@@ -56,7 +53,6 @@ BEGIN
         )
         VALUES (
             @UserId,
-            NULL,
             NULL,
             NULL,
             NULL,
@@ -87,7 +83,6 @@ BEGIN
             Division,
             Department,
             JobTitle,
-            SeniorityLevel,
             IsAdmin,
             IsApprover,
             IsDataSteward,
@@ -102,7 +97,6 @@ BEGIN
             @CurrentDivision,
             @CurrentDepartment,
             @CurrentJobTitle,
-            @CurrentSeniorityLevel,
             @IsAdmin,
             @IsApprover,
             @IsDataSteward,

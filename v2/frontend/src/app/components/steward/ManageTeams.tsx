@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Users, Edit, Trash2, UserPlus, Search, X } from "lucide-react";
+import { Plus, Users, Edit, Trash2, UserPlus, Search, X, ChevronRight, ChevronLeft, ChevronsRight, ChevronsLeft } from "lucide-react";
 import {
   fetchAdminTeams,
   fetchAdminUsers,
@@ -44,7 +44,7 @@ export function ManageTeams() {
   const [createEditModalOpen, setCreateEditModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<TeamMapped | null>(null);
-  const [formData, setFormData] = useState({ name: "", description: "", department: "" });
+  const [formData, setFormData] = useState({ name: "", description: "" });
 
   // Delete modal
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -55,6 +55,8 @@ export function ManageTeams() {
   const [allUsers, setAllUsers] = useState<AdminUser[]>([]);
   const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
   const [memberSearchQuery, setMemberSearchQuery] = useState("");
+  const [selectedAvailableItems, setSelectedAvailableItems] = useState<string[]>([]);
+  const [selectedAssignedItems, setSelectedAssignedItems] = useState<string[]>([]);
   const [isSavingMembers, setIsSavingMembers] = useState(false);
 
   const loadTeams = () => {
@@ -73,14 +75,14 @@ export function ManageTeams() {
   const handleCreateClick = () => {
     setSelectedTeam(null);
     setIsEditMode(false);
-    setFormData({ name: "", description: "", department: "" });
+    setFormData({ name: "", description: "" });
     setCreateEditModalOpen(true);
   };
 
   const handleEditClick = (team: TeamMapped) => {
     setSelectedTeam(team);
     setIsEditMode(true);
-    setFormData({ name: team.name, description: team.description, department: team.department });
+    setFormData({ name: team.name, description: team.description });
     setCreateEditModalOpen(true);
   };
 
@@ -89,7 +91,6 @@ export function ManageTeams() {
       const payload = {
         teamName: formData.name,
         description: formData.description,
-        department: formData.department,
       };
       if (isEditMode && selectedTeam) {
         await updateTeam(selectedTeam.id, payload);
@@ -132,17 +133,62 @@ export function ManageTeams() {
       setAllUsers(users);
       setSelectedMemberIds(members.map((m) => String(m.UserId)));
       setMemberSearchQuery("");
+      setSelectedAvailableItems([]);
+      setSelectedAssignedItems([]);
     } catch {
       setMembersData([]);
       setAllUsers([]);
       setSelectedMemberIds([]);
+      setSelectedAvailableItems([]);
+      setSelectedAssignedItems([]);
     }
   };
 
-  const toggleMember = (userId: string) => {
-    setSelectedMemberIds((prev) =>
-      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
+  const availableUsers = allUsers.filter((u) => !selectedMemberIds.includes(String(u.UserId)));
+  const filteredAvailableUsers = availableUsers.filter((u) => {
+    const s = memberSearchQuery.toLowerCase();
+    if (!s) return true;
+    return (
+      String(u.DisplayName ?? "").toLowerCase().includes(s) ||
+      String(u.Email ?? "").toLowerCase().includes(s)
     );
+  });
+
+  const allUsersById = new Map(allUsers.map((u) => [String(u.UserId), u] as const));
+  const membersById = new Map(membersData.map((m) => [String(m.UserId), m] as const));
+  const assignedUsers = selectedMemberIds.map((userId) => {
+    const adminUser = allUsersById.get(userId);
+    const memberUser = membersById.get(userId);
+    return {
+      UserId: userId,
+      DisplayName: adminUser?.DisplayName ?? memberUser?.DisplayName ?? userId,
+      Email: adminUser?.Email ?? memberUser?.Email,
+    };
+  });
+
+  const moveToSelected = () => {
+    if (selectedAvailableItems.length === 0) return;
+    setSelectedMemberIds((prev) => Array.from(new Set([...prev, ...selectedAvailableItems])));
+    setSelectedAvailableItems([]);
+  };
+
+  const moveAllToSelected = () => {
+    if (availableUsers.length === 0) return;
+    const ids = availableUsers.map((u) => String(u.UserId));
+    setSelectedMemberIds((prev) => Array.from(new Set([...prev, ...ids])));
+    setSelectedAvailableItems([]);
+  };
+
+  const moveToAvailable = () => {
+    if (selectedAssignedItems.length === 0) return;
+    setSelectedMemberIds((prev) => prev.filter((id) => !selectedAssignedItems.includes(id)));
+    setSelectedAssignedItems([]);
+  };
+
+  const moveAllToAvailable = () => {
+    if (selectedMemberIds.length === 0) return;
+    setSelectedMemberIds([]);
+    setSelectedAssignedItems([]);
   };
 
   const handleSaveMembers = async () => {
@@ -165,8 +211,7 @@ export function ManageTeams() {
     const s = searchQuery.toLowerCase();
     return (
       team.name.toLowerCase().includes(s) ||
-      team.description.toLowerCase().includes(s) ||
-      team.department.toLowerCase().includes(s)
+      team.description.toLowerCase().includes(s)
     );
   });
 
@@ -182,7 +227,7 @@ export function ManageTeams() {
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input
             type="text"
-            placeholder="Search teams by name, department, lead, or roles..."
+            placeholder="Search teams by name, lead, or roles..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full rounded-lg border border-input bg-input-background py-2 pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
@@ -211,8 +256,6 @@ export function ManageTeams() {
                   <p className="text-sm text-muted-foreground">{team.description}</p>
                   <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
                     {team.members > 0 && <span>{team.members} members</span>}
-                    {team.members > 0 && team.department && <span>•</span>}
-                    {team.department && <span>{team.department}</span>}
                   </div>
                 </div>
               </div>
@@ -260,13 +303,7 @@ export function ManageTeams() {
                 className="flex items-center gap-1 text-sm text-primary hover:underline"
               >
                 <UserPlus className="h-3 w-3" />
-                Add Members
-              </button>
-              <button
-                onClick={() => handleViewMembers(team)}
-                className="text-sm text-primary hover:underline"
-              >
-                View Details
+                Manage Members
               </button>
             </div>
           </div>
@@ -312,16 +349,6 @@ export function ManageTeams() {
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   placeholder="Describe this team"
                   rows={2}
-                  className="mt-1 w-full rounded-lg border border-input bg-input-background p-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                />
-              </div>
-              <div>
-                <label className="text-sm text-card-foreground">Department</label>
-                <input
-                  type="text"
-                  value={formData.department}
-                  onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                  placeholder="e.g., Finance"
                   className="mt-1 w-full rounded-lg border border-input bg-input-background p-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                 />
               </div>
@@ -377,8 +404,8 @@ export function ManageTeams() {
       {/* ── Members Modal ─────────────────────────────────────────────────────── */}
       {membersModalOpen && selectedTeam && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-lg rounded-lg border border-border bg-card p-6 shadow-lg max-h-[80vh] flex flex-col">
-            <div className="flex items-center justify-between">
+          <div className="w-full max-w-5xl rounded-lg border border-border bg-card p-5 shadow-lg max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between mb-3">
               <div>
                 <h3 className="text-lg text-card-foreground">Members: {selectedTeam.name}</h3>
                 <p className="text-sm text-muted-foreground">{membersData.length} members</p>
@@ -388,50 +415,116 @@ export function ManageTeams() {
               </button>
             </div>
 
-            <div className="mt-4 space-y-3">
-              <input
-                type="text"
-                value={memberSearchQuery}
-                onChange={(e) => setMemberSearchQuery(e.target.value)}
-                placeholder="Search users by name or email..."
-                className="w-full rounded-lg border border-input bg-input-background p-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-              />
-            </div>
-
-            <div className="mt-4 flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-hidden">
               {allUsers.length > 0 ? (
-                <div className="divide-y divide-border rounded-lg border border-border">
-                  {allUsers
-                    .filter((u) => {
-                      const s = memberSearchQuery.toLowerCase();
-                      return (
-                        !s ||
-                        String(u.DisplayName ?? "").toLowerCase().includes(s) ||
-                        String(u.Email ?? "").toLowerCase().includes(s)
-                      );
-                    })
-                    .map((user) => {
-                      const userId = String(user.UserId);
-                      const checked = selectedMemberIds.includes(userId);
-                      return (
-                    <label key={userId} className="flex cursor-pointer items-center gap-3 p-3 hover:bg-secondary/40">
+                <div className="grid grid-cols-5 gap-4 h-full overflow-hidden">
+                  <div className="col-span-2 flex flex-col border border-border rounded-lg overflow-hidden">
+                    <div className="p-3 border-b border-border bg-secondary/30 space-y-2">
+                      <label className="text-sm font-medium text-card-foreground">
+                        Available Users ({availableUsers.length})
+                      </label>
                       <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() => toggleMember(userId)}
-                        className="h-4 w-4 rounded border-input"
+                        type="text"
+                        value={memberSearchQuery}
+                        onChange={(e) => setMemberSearchQuery(e.target.value)}
+                        placeholder="Search users..."
+                        className="w-full rounded-lg border border-input bg-input-background p-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                       />
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
-                          {String(user.DisplayName ?? "U").split(" ").map((n) => n[0]).join("").slice(0, 2)}
-                        </div>
-                        <div>
-                          <p className="text-sm text-card-foreground">{user.DisplayName}</p>
-                          {user.Email && <p className="text-xs text-muted-foreground">{user.Email}</p>}
-                        </div>
-                      </div>
-                    </label>
-                  );})}
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-2 space-y-1">
+                      {filteredAvailableUsers.map((user, idx) => {
+                        const userId = String(user.UserId);
+                        return (
+                          <div
+                            key={userId}
+                            onClick={() => {
+                              setSelectedAvailableItems((prev) =>
+                                prev.includes(userId) ? prev.filter((x) => x !== userId) : [...prev, userId]
+                              );
+                            }}
+                            className={`cursor-pointer rounded border px-3 py-1.5 text-sm transition-colors ${
+                              selectedAvailableItems.includes(userId)
+                                ? "border-primary bg-primary text-primary-foreground"
+                                : `${idx % 2 === 0 ? "bg-card" : "bg-secondary/20"} border-border hover:bg-secondary/50 text-card-foreground`
+                            }`}
+                          >
+                            <p className="truncate">{user.DisplayName}</p>
+                            {user.Email && <p className="truncate text-xs opacity-80">{user.Email}</p>}
+                          </div>
+                        );
+                      })}
+                      {filteredAvailableUsers.length === 0 && (
+                        <p className="text-sm text-muted-foreground text-center py-4">
+                          {memberSearchQuery ? "No users found" : "All users assigned"}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="col-span-1 flex flex-col items-center justify-center gap-2">
+                    <button
+                      onClick={moveToSelected}
+                      disabled={selectedAvailableItems.length === 0}
+                      className="rounded-lg bg-primary px-3 py-2 text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <ChevronRight className="h-5 w-5" />
+                    </button>
+                    <button
+                      onClick={moveAllToSelected}
+                      disabled={availableUsers.length === 0}
+                      className="rounded-lg bg-primary px-3 py-2 text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <ChevronsRight className="h-5 w-5" />
+                    </button>
+                    <button
+                      onClick={moveToAvailable}
+                      disabled={selectedAssignedItems.length === 0}
+                      className="rounded-lg bg-primary px-3 py-2 text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <ChevronLeft className="h-5 w-5" />
+                    </button>
+                    <button
+                      onClick={moveAllToAvailable}
+                      disabled={selectedMemberIds.length === 0}
+                      className="rounded-lg bg-primary px-3 py-2 text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <ChevronsLeft className="h-5 w-5" />
+                    </button>
+                  </div>
+
+                  <div className="col-span-2 flex flex-col border border-border rounded-lg overflow-hidden">
+                    <div className="p-3 border-b border-border bg-secondary/30">
+                      <label className="text-sm font-medium text-card-foreground">
+                        Assigned Users ({selectedMemberIds.length})
+                      </label>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-2 space-y-1">
+                      {assignedUsers.map((user, idx) => {
+                        const userId = String(user.UserId);
+                        return (
+                          <div
+                            key={userId}
+                            onClick={() => {
+                              setSelectedAssignedItems((prev) =>
+                                prev.includes(userId) ? prev.filter((x) => x !== userId) : [...prev, userId]
+                              );
+                            }}
+                            className={`cursor-pointer rounded border px-3 py-1.5 text-sm transition-colors ${
+                              selectedAssignedItems.includes(userId)
+                                ? "border-primary bg-primary text-primary-foreground"
+                                : `${idx % 2 === 0 ? "bg-card" : "bg-secondary/20"} border-border hover:bg-secondary/50 text-card-foreground`
+                            }`}
+                          >
+                            <p className="truncate">{user.DisplayName}</p>
+                            {user.Email && <p className="truncate text-xs opacity-80">{user.Email}</p>}
+                          </div>
+                        );
+                      })}
+                      {assignedUsers.length === 0 && (
+                        <p className="text-sm text-muted-foreground text-center py-4">No users assigned yet</p>
+                      )}
+                    </div>
+                  </div>
                 </div>
               ) : (
                 <div className="rounded-lg border border-border bg-card p-8 text-center">

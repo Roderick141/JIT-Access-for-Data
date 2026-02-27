@@ -22,7 +22,6 @@ CREATE TABLE [jit].[User_Context_Versions](
     [Division] [nvarchar](255) NULL,
     [Department] [nvarchar](255) NULL,
     [JobTitle] [nvarchar](255) NULL,
-    [SeniorityLevel] [int] NULL,
     [IsAdmin] [bit] NOT NULL CONSTRAINT [DF_UserContext_IsAdmin] DEFAULT (0),
     [IsApprover] [bit] NOT NULL CONSTRAINT [DF_UserContext_IsApprover] DEFAULT (0),
     [IsDataSteward] [bit] NOT NULL CONSTRAINT [DF_UserContext_IsDataSteward] DEFAULT (0),

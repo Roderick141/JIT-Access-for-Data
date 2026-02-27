@@ -13,7 +13,6 @@ CREATE TABLE [jit].[Role_Eligibility_Rules](
     [ScopeValue] [nvarchar](255) NULL,
     [CanRequest] [bit] NOT NULL CONSTRAINT [DF_Role_Eligibility_Rules_CanRequest] DEFAULT (1),
     [Priority] [int] NOT NULL CONSTRAINT [DF_Role_Eligibility_Rules_Priority] DEFAULT (0),
-    [MinSeniorityLevel] [int] NULL,
     [MaxDurationMinutes] [int] NOT NULL CONSTRAINT [DF_Role_Eligibility_Rules_MaxDurationMinutes] DEFAULT (1440),
     [RequiresJustification] [bit] NOT NULL CONSTRAINT [DF_Role_Eligibility_Rules_RequiresJustification] DEFAULT (1),
     [RequiresApproval] [bit] NOT NULL CONSTRAINT [DF_Role_Eligibility_Rules_RequiresApproval] DEFAULT (1),

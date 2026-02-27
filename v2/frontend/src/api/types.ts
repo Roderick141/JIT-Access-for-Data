@@ -20,7 +20,6 @@ export interface CurrentUser {
   Division: string | null;
   Department: string | null;
   JobTitle: string | null;
-  SeniorityLevel: string | null;
   IsAdmin: boolean;
   IsApprover: boolean;
   IsDataSteward: boolean;
@@ -120,7 +119,6 @@ export interface ApproverRequestDetail {
   RequesterEmail?: string;
   RequesterDepartment?: string;
   RequesterDivision?: string;
-  RequesterSeniority?: number | null;
   Roles?: Array<Record<string, unknown>>;
   [key: string]: unknown;
 }
@@ -173,7 +171,6 @@ export interface AdminUser {
   Division: string | null;
   Department: string | null;
   JobTitle: string | null;
-  SeniorityLevel: string | null;
   IsAdmin: boolean;
   IsApprover: boolean;
   IsDataSteward: boolean;

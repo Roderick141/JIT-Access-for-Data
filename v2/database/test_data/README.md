@@ -34,30 +34,29 @@ Run each script in numerical order:
 
 ### Users Created
 
-The test data includes users with different seniority levels:
+The test data includes users across multiple teams and departments:
 
-- **Senior Users (Level 4-5):**
+- **Engineering Users:**
   - `DOMAIN\john.smith` - Principal Data Engineer (Level 4)
   - `DOMAIN\sarah.jones` - Director of Engineering (Level 5)
-  - `DOMAIN\admin.user` - Security Administrator (Level 5)
-
-- **Mid-Level Users (Level 2-3):**
   - `DOMAIN\mike.wilson` - Senior Data Engineer (Level 3)
-  - `DOMAIN\emily.brown` - Senior Business Analyst (Level 3)
-  - `DOMAIN\david.lee` - DevOps Engineer (Level 2)
-
-- **Junior Users (Level 1):**
   - `DOMAIN\alex.taylor` - Junior Data Engineer (Level 1)
+
+- **Business Users:**
+  - `DOMAIN\emily.brown` - Senior Business Analyst (Level 3)
   - `DOMAIN\jessica.martin` - Business Analyst (Level 1)
 
+- **Platform Users:**
+  - `DOMAIN\david.lee` - DevOps Engineer
+
 - **Approvers:**
-  - `DOMAIN\approver1` - Data Manager (Level 4)
-  - `DOMAIN\admin.user` - Security Administrator (Level 5)
+  - `DOMAIN\approver1` - Data Manager
+  - `DOMAIN\admin.user` - Security Administrator
 
 ### Roles Created
 
 1. **Read-Only Reports** - Pre-approved, all users eligible
-2. **Advanced Analytics** - Seniority-based auto-approval (Level 3+), team-based eligibility
+2. **Advanced Analytics** - Team-based eligibility, requires approval
 3. **Data Warehouse Reader** - Department-based eligibility, requires approval
 4. **Full Database Access** - Division-based eligibility, requires approval, requires ticket
 5. **Data Administrator** - Team-based eligibility, requires approval, requires ticket
@@ -68,11 +67,10 @@ The test data includes users with different seniority levels:
 The test data supports testing:
 
 1. **Pre-approved Roles**: `Read-Only Reports` and `Temporary Query Access` are auto-approved
-2. **Seniority-Based Auto-Approval**: `Advanced Analytics` auto-approves for users with seniority level 3+
-3. **Manual Approval**: `Full Database Access` and `Data Administrator` require manual approval
-4. **Eligibility Rules**: Different scopes (All, Department, Division, Team)
-5. **Expired Grants**: One grant is already expired for testing the expiry job
-6. **Pending Requests**: Requests in various states (Pending, Approved, Denied, AutoApproved)
+2. **Manual Approval**: `Advanced Analytics`, `Full Database Access`, and `Data Administrator` require manual approval
+3. **Eligibility Rules**: Different scopes (All, Department, Division, Team)
+4. **Expired Grants**: One grant is already expired for testing the expiry job
+5. **Pending Requests**: Requests in various states (Pending, Approved, Denied, AutoApproved)
 
 ## Customization
 

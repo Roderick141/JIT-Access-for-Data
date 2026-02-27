@@ -26,7 +26,6 @@ CREATE TABLE [jit].[Users](
     [Division] [nvarchar](255) NULL,
     [Department] [nvarchar](255) NULL,
     [JobTitle] [nvarchar](255) NULL,
-    [SeniorityLevel] [int] NULL,
     [IsAdmin] [bit] NOT NULL CONSTRAINT [DF_Users_IsAdmin] DEFAULT (0),
     [IsApprover] [bit] NOT NULL CONSTRAINT [DF_Users_IsApprover] DEFAULT (0),
     [IsDataSteward] [bit] NOT NULL CONSTRAINT [DF_Users_IsDataSteward] DEFAULT (0),
@@ -57,10 +56,6 @@ CREATE NONCLUSTERED INDEX [IX_Users_IsApprover] ON [jit].[Users]([IsApprover] AS
 
 CREATE NONCLUSTERED INDEX [IX_Users_IsDataSteward] ON [jit].[Users]([IsDataSteward] ASC)
     WHERE [IsDataSteward] = 1
-    WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
-
-CREATE NONCLUSTERED INDEX [IX_Users_Division_SeniorityLevel] ON [jit].[Users]([Division] ASC, [SeniorityLevel] ASC)
-    WHERE [Division] IS NOT NULL AND [SeniorityLevel] IS NOT NULL
     WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON)
 
 GO

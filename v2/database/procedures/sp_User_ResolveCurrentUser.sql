@@ -25,7 +25,6 @@ CREATE PROCEDURE [jit].[sp_User_ResolveCurrentUser]
     @Department NVARCHAR(255) OUTPUT,
     @Division NVARCHAR(255) OUTPUT,
     @JobTitle NVARCHAR(255) OUTPUT,
-    @SeniorityLevel INT OUTPUT,
     @IsAdmin BIT OUTPUT,
     @IsEnabled BIT OUTPUT
 AS
@@ -44,7 +43,6 @@ BEGIN
         @Department = Department,
         @Division = Division,
         @JobTitle = JobTitle,
-        @SeniorityLevel = SeniorityLevel,
         @IsAdmin = IsAdmin,
         @IsEnabled = IsEnabled
     FROM [jit].[vw_User_CurrentContext]
@@ -61,7 +59,6 @@ BEGIN
         SET @Department = NULL;
         SET @Division = NULL;
         SET @JobTitle = NULL;
-        SET @SeniorityLevel = NULL;
         SET @IsAdmin = 0;
         SET @IsEnabled = 0;
     END

@@ -33,7 +33,6 @@ BEGIN
         Division,
         Department,
         JobTitle,
-        SeniorityLevel,
         IsAdmin,
         IsApprover,
         IsDataSteward,

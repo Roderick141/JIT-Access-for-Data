@@ -7,7 +7,7 @@
 -- =============================================
 -- Note: This expects a staging table jit.AD_Staging with columns:
 -- UserId (samaccountname), LoginName, GivenName, Surname, DisplayName, Email,
--- Division, Department, JobTitle, SeniorityLevel, IsEnabled
+-- Division, Department, JobTitle, IsEnabled
 
 USE [DMAP_JIT_Permissions]
 GO
@@ -83,7 +83,6 @@ BEGIN
                 ISNULL(c.Division, '') <> ISNULL(s.Division, '')
              OR ISNULL(c.Department, '') <> ISNULL(s.Department, '')
              OR ISNULL(c.JobTitle, '') <> ISNULL(s.JobTitle, '')
-             OR ISNULL(c.SeniorityLevel, -2147483648) <> ISNULL(s.SeniorityLevel, -2147483648)
              OR c.IsEnabled <> ISNULL(s.IsEnabled, 1)
           );
 
@@ -108,7 +107,7 @@ BEGIN
         -- Insert new active context rows for staged users with no active context
         -- or where prior active row was closed due to changes.
         INSERT INTO [jit].[User_Context_Versions] (
-            UserId, Division, Department, JobTitle, SeniorityLevel,
+            UserId, Division, Department, JobTitle,
             IsAdmin, IsApprover, IsDataSteward, IsEnabled,
             IsActive, LastAdSyncUtc, ValidFromUtc, ValidToUtc,
             CreatedBy, UpdatedBy
@@ -118,7 +117,6 @@ BEGIN
             s.Division,
             s.Department,
             s.JobTitle,
-            s.SeniorityLevel,
             ISNULL(prev.IsAdmin, 0),
             ISNULL(prev.IsApprover, 0),
             ISNULL(prev.IsDataSteward, 0),
@@ -149,7 +147,7 @@ BEGIN
         -- Insert disabled context rows for users missing from AD staging
         -- while retaining last known org/role metadata.
         INSERT INTO [jit].[User_Context_Versions] (
-            UserId, Division, Department, JobTitle, SeniorityLevel,
+            UserId, Division, Department, JobTitle,
             IsAdmin, IsApprover, IsDataSteward, IsEnabled,
             IsActive, LastAdSyncUtc, ValidFromUtc, ValidToUtc,
             CreatedBy, UpdatedBy
@@ -159,7 +157,6 @@ BEGIN
             prev.Division,
             prev.Department,
             prev.JobTitle,
-            prev.SeniorityLevel,
             ISNULL(prev.IsAdmin, 0),
             ISNULL(prev.IsApprover, 0),
             ISNULL(prev.IsDataSteward, 0),
@@ -176,7 +173,6 @@ BEGIN
                 p.Division,
                 p.Department,
                 p.JobTitle,
-                p.SeniorityLevel,
                 p.IsAdmin,
                 p.IsApprover,
                 p.IsDataSteward
@@ -202,7 +198,6 @@ BEGIN
             u.Division = c.Division,
             u.Department = c.Department,
             u.JobTitle = c.JobTitle,
-            u.SeniorityLevel = c.SeniorityLevel,
             u.IsAdmin = c.IsAdmin,
             u.IsApprover = c.IsApprover,
             u.IsDataSteward = c.IsDataSteward,
