@@ -26,8 +26,8 @@ BEGIN
     SELECT
         r.RequestId,
         r.UserId,
-        STRING_AGG(rol.RoleName, ', ') AS RoleNames,
-        COUNT(rr.RoleId) AS RoleCount,
+        roleAgg.RoleNames,
+        roleAgg.RoleCount,
         r.RequestedDurationMinutes,
         r.Justification,
         r.TicketRef,
@@ -40,15 +40,43 @@ BEGIN
         g.RevokedUtc,
         g.RevokeReason
     FROM [jit].[Requests] r
-    INNER JOIN [jit].[Request_Roles] rr ON r.RequestId = rr.RequestId
-    INNER JOIN [jit].[Roles] rol ON rr.RoleId = rol.RoleId AND rol.IsActive = 1
-    LEFT JOIN [jit].[Approvals] a ON r.RequestId = a.RequestId
+    OUTER APPLY (
+        SELECT
+            STRING_AGG(roleRows.RoleName, ', ') AS RoleNames,
+            COUNT(*) AS RoleCount
+        FROM (
+            SELECT DISTINCT
+                rr.RoleId,
+                rol.RoleName
+            FROM [jit].[Request_Roles] rr
+            INNER JOIN [jit].[Roles] rol
+                ON rr.RoleId = rol.RoleId
+               AND rol.IsActive = 1
+            WHERE rr.RequestId = r.RequestId
+        ) roleRows
+    ) roleAgg
+    OUTER APPLY (
+        SELECT TOP 1
+            ap.ApproverUserId,
+            ap.DecisionComment,
+            ap.DecisionUtc
+        FROM [jit].[Approvals] ap
+        WHERE ap.RequestId = r.RequestId
+        ORDER BY ap.DecisionUtc DESC, ap.ApprovalId DESC
+    ) a
     LEFT JOIN [jit].[vw_User_CurrentContext] approver ON approver.UserId = a.ApproverUserId
-    LEFT JOIN [jit].[Grants] g ON g.RequestId = r.RequestId
+    OUTER APPLY (
+        SELECT TOP 1
+            gr.RevokedUtc,
+            gr.RevokeReason
+        FROM [jit].[Grants] gr
+        WHERE gr.RequestId = r.RequestId
+        ORDER BY
+            CASE WHEN gr.RevokedUtc IS NULL THEN 1 ELSE 0 END,
+            gr.RevokedUtc DESC,
+            gr.GrantId DESC
+    ) g
     WHERE r.UserId = @UserId
-    GROUP BY
-        r.RequestId, r.UserId, r.RequestedDurationMinutes, r.Justification, r.TicketRef, r.Status,
-        r.CreatedUtc, r.UpdatedUtc, a.DecisionComment, a.DecisionUtc, approver.DisplayName, g.RevokedUtc, g.RevokeReason
     ORDER BY r.CreatedUtc DESC;
 END
 GO

@@ -26,16 +26,16 @@ BEGIN
             a.RequestId,
             a.GrantId,
             a.DetailsJson AS Details,
-            CASE WHEN ISJSON(a.DetailsJson) = 1 THEN TRY_CONVERT(INT, JSON_VALUE(a.DetailsJson, '$.RoleId')) END AS RoleIdFromDetails,
-            CASE WHEN ISJSON(a.DetailsJson) = 1 THEN JSON_VALUE(a.DetailsJson, '$.RoleName') END AS RoleNameFromDetails,
-            CASE WHEN ISJSON(a.DetailsJson) = 1 THEN JSON_VALUE(a.DetailsJson, '$.RoleNames') END AS RoleNamesFromDetails,
-            CASE WHEN ISJSON(a.DetailsJson) = 1 THEN JSON_VALUE(a.DetailsJson, '$.DecisionComment') END AS DecisionCommentFromDetails,
-            CASE WHEN ISJSON(a.DetailsJson) = 1 THEN JSON_VALUE(a.DetailsJson, '$.TicketRef') END AS TicketRefFromDetails,
-            CASE WHEN ISJSON(a.DetailsJson) = 1 THEN TRY_CONVERT(INT, JSON_VALUE(a.DetailsJson, '$.RequestedDurationMinutes')) END AS RequestedDurationFromDetails,
-            CASE WHEN ISJSON(a.DetailsJson) = 1 THEN JSON_VALUE(a.DetailsJson, '$.ValidToUtc') END AS ValidToUtcFromDetails,
-            CASE WHEN ISJSON(a.DetailsJson) = 1 THEN TRY_CONVERT(DATETIME2(7), JSON_VALUE(a.DetailsJson, '$.ValidToUtc')) END AS ValidToUtcDtFromDetails,
+            j.RoleIdFromDetails,
+            j.RoleNameFromDetails,
+            j.RoleNamesFromDetails,
+            j.DecisionCommentFromDetails,
+            j.TicketRefFromDetails,
+            j.RequestedDurationFromDetails,
+            j.ValidToUtcFromDetails,
+            j.ValidToUtcDtFromDetails,
             CASE
-                WHEN ISJSON(a.DetailsJson) = 1 THEN JSON_VALUE(a.DetailsJson, '$.DbRoleName')
+                WHEN j.DbRoleNameFromDetails IS NOT NULL THEN j.DbRoleNameFromDetails
                 WHEN a.DetailsJson LIKE '%"DbRoleName":"%' THEN
                     SUBSTRING(
                         a.DetailsJson,
@@ -48,7 +48,7 @@ BEGIN
                     )
             END AS DbRoleNameFromDetails,
             CASE
-                WHEN ISJSON(a.DetailsJson) = 1 THEN JSON_VALUE(a.DetailsJson, '$.DatabaseName')
+                WHEN j.DatabaseNameFromDetails IS NOT NULL THEN j.DatabaseNameFromDetails
                 WHEN a.DetailsJson LIKE '%"DatabaseName":"%' THEN
                     SUBSTRING(
                         a.DetailsJson,
@@ -60,9 +60,24 @@ BEGIN
                         ) - (CHARINDEX('"DatabaseName":"', a.DetailsJson) + LEN('"DatabaseName":"'))
                     )
             END AS DatabaseNameFromDetails,
-            CASE WHEN ISJSON(a.DetailsJson) = 1 THEN JSON_VALUE(a.DetailsJson, '$.Error') END AS ErrorFromDetails,
-            CASE WHEN ISJSON(a.DetailsJson) = 1 THEN TRY_CONVERT(INT, JSON_VALUE(a.DetailsJson, '$.ExpiredCount')) END AS ExpiredCountFromDetails
+            j.ErrorFromDetails,
+            j.ExpiredCountFromDetails
         FROM [jit].[AuditLog] a
+        OUTER APPLY OPENJSON(CASE WHEN ISJSON(a.DetailsJson) = 1 THEN a.DetailsJson ELSE N'{}' END)
+        WITH (
+            RoleIdFromDetails INT '$.RoleId',
+            RoleNameFromDetails NVARCHAR(255) '$.RoleName',
+            RoleNamesFromDetails NVARCHAR(MAX) '$.RoleNames',
+            DecisionCommentFromDetails NVARCHAR(MAX) '$.DecisionComment',
+            TicketRefFromDetails NVARCHAR(255) '$.TicketRef',
+            RequestedDurationFromDetails INT '$.RequestedDurationMinutes',
+            ValidToUtcFromDetails NVARCHAR(100) '$.ValidToUtc',
+            ValidToUtcDtFromDetails DATETIME2(7) '$.ValidToUtc',
+            DbRoleNameFromDetails NVARCHAR(255) '$.DbRoleName',
+            DatabaseNameFromDetails NVARCHAR(255) '$.DatabaseName',
+            ErrorFromDetails NVARCHAR(MAX) '$.Error',
+            ExpiredCountFromDetails INT '$.ExpiredCount'
+        ) j
         WHERE (@Search = '' OR a.EventType LIKE '%' + @Search + '%' OR a.DetailsJson LIKE '%' + @Search + '%')
           AND (@EventType = '' OR a.EventType = @EventType)
           AND (@StartDate IS NULL OR a.EventUtc >= @StartDate)
@@ -79,11 +94,8 @@ BEGIN
             roleFromRequest.RoleNames AS RoleNamesFromRequest,
             CASE
                 WHEN lb.ValidToUtcDtFromDetails IS NOT NULL THEN
-                    FORMAT(
-                        (lb.ValidToUtcDtFromDetails AT TIME ZONE 'UTC' AT TIME ZONE 'W. Europe Standard Time'),
-                        'dd-MM-yyyy HH:mm',
-                        'nl-NL'
-                    )
+                    CONVERT(CHAR(10), CAST((lb.ValidToUtcDtFromDetails AT TIME ZONE 'UTC' AT TIME ZONE 'W. Europe Standard Time') AS DATETIME2(0)), 105)
+                    + ' ' + LEFT(CONVERT(CHAR(8), CAST((lb.ValidToUtcDtFromDetails AT TIME ZONE 'UTC' AT TIME ZONE 'W. Europe Standard Time') AS DATETIME2(0)), 108), 5)
             END AS ValidToNlFromDetails
         FROM LogBase lb
         LEFT JOIN [jit].[User_Context_Versions] auc ON auc.UserContextVersionId = lb.ActorUserContextVersionId
@@ -106,6 +118,7 @@ BEGIN
         ) roleFromRequest
     )
     SELECT
+        COUNT(*) OVER() AS TotalCount,
         e.AuditLogId,
         e.EventUtc,
         e.EventType,
@@ -156,7 +169,8 @@ BEGIN
         END AS DisplayMessage
     FROM Enriched e
     ORDER BY e.EventUtc DESC
-    OFFSET ((@PageNumber - 1) * @PageSize) ROWS FETCH NEXT @PageSize ROWS ONLY;
+    OFFSET ((@PageNumber - 1) * @PageSize) ROWS FETCH NEXT @PageSize ROWS ONLY
+    OPTION (RECOMPILE);
 END
 GO
 

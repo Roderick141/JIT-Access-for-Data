@@ -207,3 +207,14 @@ The biggest gaps vs market leaders are **automated discovery/metadata**, **polic
 - **“Evidence by default”**: every decision and action is auditable.
 - **Operate at scale**: async jobs + retries + observability, not synchronous request/response.
 
+---
+
+## Implementation hygiene / deprecation candidates
+
+- **Approver request detail endpoint** `GET /api/approver/requests/{request_id}` is currently a **deprecation candidate**:
+  - Current approver UI is fully supported by `GET /api/approver/pending`.
+  - Detail endpoint provides limited additional value today and is not wired in active UI flows.
+  - Keep temporarily for optional future drill-down; remove if no drill-down feature is planned.
+
+- **Automated guardrail:** run `node v2/scripts/deprecation_guardrail.mjs` once per sprint to generate `v2/DEPRECATION_GUARDRAIL_REPORT.md` and review unused wrappers/routes before removals.
+

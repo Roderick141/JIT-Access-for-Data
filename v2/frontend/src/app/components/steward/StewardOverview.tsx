@@ -87,14 +87,14 @@ export function StewardOverview() {
     Promise.all([
       fetchAdminStats(),
       fetchPendingApprovals(),
-      fetchAuditLogs(),
+      fetchAuditLogs({ page: 1, pageSize: 5 }),
     ])
       .then(([s, p, a]) => {
         setStats(s);
         setPendingApprovals(
           p.filter((r) => (r.Status ?? "").toLowerCase() === "pending").map(mapApproval)
         );
-        setRecentActivity(a.slice(0, 5).map(mapAuditEntry));
+        setRecentActivity(a.map(mapAuditEntry));
       })
       .catch(console.error)
       .finally(() => setIsLoading(false));
@@ -166,7 +166,7 @@ export function StewardOverview() {
 
   const kpiData = [
     {
-      label: "Roles Active",
+      label: "Active Grants",
       value: stats ? String(stats.activeGrants) : "—",
       icon: Key,
       color: "bg-green-500",

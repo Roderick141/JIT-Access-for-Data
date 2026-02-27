@@ -36,6 +36,7 @@ GO
 -- Core identity and role tables (must be created first)
 :r ./schema/01_Create_Users.sql
 :r ./schema/01b_Create_User_Context_Versions.sql
+:r ./schema/01c_Create_User_CurrentContext_View.sql
 :r ./schema/02_Create_Roles.sql
 :r ./schema/03_Create_DB_Roles.sql
 :r ./schema/04_Create_Role_To_DB_Roles.sql

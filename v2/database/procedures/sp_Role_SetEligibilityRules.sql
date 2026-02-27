@@ -21,18 +21,28 @@ BEGIN
     SELECT
         ROW_NUMBER() OVER (ORDER BY (SELECT 1)) + ISNULL((SELECT MAX(EligibilityRuleId) FROM [jit].[Role_Eligibility_Rules]), 0),
         @RoleId,
-        JSON_VALUE(value, '$.scopeType'),
-        JSON_VALUE(value, '$.scopeValue'),
-        ISNULL(TRY_CAST(JSON_VALUE(value, '$.canRequest') AS BIT), 1),
-        ISNULL(TRY_CAST(JSON_VALUE(value, '$.priority') AS INT), 0),
-        TRY_CAST(JSON_VALUE(value, '$.minSeniorityLevel') AS INT),
-        ISNULL(TRY_CAST(JSON_VALUE(value, '$.maxDurationMinutes') AS INT), 1440),
-        ISNULL(TRY_CAST(JSON_VALUE(value, '$.requiresJustification') AS BIT), 1),
-        ISNULL(TRY_CAST(JSON_VALUE(value, '$.requiresApproval') AS BIT), 1),
+        j.ScopeType,
+        j.ScopeValue,
+        ISNULL(j.CanRequest, 1),
+        ISNULL(j.Priority, 0),
+        j.MinSeniorityLevel,
+        ISNULL(j.MaxDurationMinutes, 1440),
+        ISNULL(j.RequiresJustification, 1),
+        ISNULL(j.RequiresApproval, 1),
         1,
         GETUTCDATE(),
         ISNULL(@ActorUserId, SUSER_SNAME()),
         ISNULL(@ActorUserId, SUSER_SNAME())
-    FROM OPENJSON(@RulesJson);
+    FROM OPENJSON(@RulesJson)
+    WITH (
+        ScopeType NVARCHAR(4000) '$.scopeType',
+        ScopeValue NVARCHAR(4000) '$.scopeValue',
+        CanRequest BIT '$.canRequest',
+        Priority INT '$.priority',
+        MinSeniorityLevel INT '$.minSeniorityLevel',
+        MaxDurationMinutes INT '$.maxDurationMinutes',
+        RequiresJustification BIT '$.requiresJustification',
+        RequiresApproval BIT '$.requiresApproval'
+    ) j;
 END
 GO

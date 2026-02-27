@@ -2,12 +2,14 @@ import { useState, useEffect } from "react";
 import { Plus, Users, Edit, Trash2, UserPlus, Search, X } from "lucide-react";
 import {
   fetchAdminTeams,
+  fetchAdminUsers,
   createTeam,
   updateTeam,
   deleteTeam,
   fetchTeamMembers,
+  setTeamMembers,
 } from "@/api/endpoints";
-import type { Team, TeamMember } from "@/api/types";
+import type { Team, TeamMember, AdminUser } from "@/api/types";
 
 interface TeamMapped {
   id: number;
@@ -25,7 +27,7 @@ function mapTeam(t: Team): TeamMapped {
     id: t.TeamId,
     name: t.TeamName,
     description: t.TeamDescription ?? "",
-    members: 0,
+    members: Number(t.MemberCount ?? 0),
     roles: [],
     lead: "",
     department: String(t["Department"] ?? t["TeamDepartment"] ?? ""),
@@ -50,6 +52,10 @@ export function ManageTeams() {
   // Members modal
   const [membersModalOpen, setMembersModalOpen] = useState(false);
   const [membersData, setMembersData] = useState<TeamMember[]>([]);
+  const [allUsers, setAllUsers] = useState<AdminUser[]>([]);
+  const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
+  const [memberSearchQuery, setMemberSearchQuery] = useState("");
+  const [isSavingMembers, setIsSavingMembers] = useState(false);
 
   const loadTeams = () => {
     setIsLoading(true);
@@ -118,10 +124,39 @@ export function ManageTeams() {
     setSelectedTeam(team);
     setMembersModalOpen(true);
     try {
-      const members = await fetchTeamMembers(team.id);
+      const [members, users] = await Promise.all([
+        fetchTeamMembers(team.id),
+        fetchAdminUsers({ page: 1, pageSize: 500 }),
+      ]);
       setMembersData(members);
+      setAllUsers(users);
+      setSelectedMemberIds(members.map((m) => String(m.UserId)));
+      setMemberSearchQuery("");
     } catch {
       setMembersData([]);
+      setAllUsers([]);
+      setSelectedMemberIds([]);
+    }
+  };
+
+  const toggleMember = (userId: string) => {
+    setSelectedMemberIds((prev) =>
+      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
+    );
+  };
+
+  const handleSaveMembers = async () => {
+    if (!selectedTeam) return;
+    setIsSavingMembers(true);
+    try {
+      await setTeamMembers(selectedTeam.id, selectedMemberIds);
+      const refreshedMembers = await fetchTeamMembers(selectedTeam.id);
+      setMembersData(refreshedMembers);
+      loadTeams();
+    } catch (err: unknown) {
+      alert(`Save members failed: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setIsSavingMembers(false);
     }
   };
 
@@ -353,22 +388,50 @@ export function ManageTeams() {
               </button>
             </div>
 
+            <div className="mt-4 space-y-3">
+              <input
+                type="text"
+                value={memberSearchQuery}
+                onChange={(e) => setMemberSearchQuery(e.target.value)}
+                placeholder="Search users by name or email..."
+                className="w-full rounded-lg border border-input bg-input-background p-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              />
+            </div>
+
             <div className="mt-4 flex-1 overflow-y-auto">
-              {membersData.length > 0 ? (
+              {allUsers.length > 0 ? (
                 <div className="divide-y divide-border rounded-lg border border-border">
-                  {membersData.map((member) => (
-                    <div key={member.UserId} className="p-3">
+                  {allUsers
+                    .filter((u) => {
+                      const s = memberSearchQuery.toLowerCase();
+                      return (
+                        !s ||
+                        String(u.DisplayName ?? "").toLowerCase().includes(s) ||
+                        String(u.Email ?? "").toLowerCase().includes(s)
+                      );
+                    })
+                    .map((user) => {
+                      const userId = String(user.UserId);
+                      const checked = selectedMemberIds.includes(userId);
+                      return (
+                    <label key={userId} className="flex cursor-pointer items-center gap-3 p-3 hover:bg-secondary/40">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleMember(userId)}
+                        className="h-4 w-4 rounded border-input"
+                      />
                       <div className="flex items-center gap-3">
                         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
-                          {member.DisplayName.split(" ").map((n) => n[0]).join("").slice(0, 2)}
+                          {String(user.DisplayName ?? "U").split(" ").map((n) => n[0]).join("").slice(0, 2)}
                         </div>
                         <div>
-                          <p className="text-sm text-card-foreground">{member.DisplayName}</p>
-                          {member.Email && <p className="text-xs text-muted-foreground">{member.Email}</p>}
+                          <p className="text-sm text-card-foreground">{user.DisplayName}</p>
+                          {user.Email && <p className="text-xs text-muted-foreground">{user.Email}</p>}
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    </label>
+                  );})}
                 </div>
               ) : (
                 <div className="rounded-lg border border-border bg-card p-8 text-center">
@@ -377,7 +440,14 @@ export function ManageTeams() {
               )}
             </div>
 
-            <div className="mt-4 flex justify-end border-t border-border pt-4">
+            <div className="mt-4 flex justify-end gap-3 border-t border-border pt-4">
+              <button
+                onClick={handleSaveMembers}
+                disabled={isSavingMembers}
+                className="rounded-lg bg-primary px-4 py-2 text-sm text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+              >
+                {isSavingMembers ? "Saving..." : "Save Members"}
+              </button>
               <button
                 onClick={() => setMembersModalOpen(false)}
                 className="rounded-lg border border-border bg-card px-4 py-2 text-sm text-foreground hover:bg-secondary"

@@ -9,7 +9,7 @@ type ApprovalStatus = "pending" | "approved" | "rejected";
 interface MappedRequest {
   id: number;
   displayId: string;
-  requesterId: number;
+  requesterId: string;
   requesterName: string;
   requesterEmail: string;
   requesterDepartment: string;

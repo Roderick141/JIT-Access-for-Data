@@ -1,6 +1,6 @@
 /**
  * Typed API endpoint functions.
- * Each function calls the Flask REST API via the thin fetch wrapper.
+ * Each function calls the FastAPI REST API via the thin fetch wrapper.
  */
 import { api } from "./client";
 import type {
@@ -9,6 +9,7 @@ import type {
   UserRequest,
   RequestableRole,
   PendingApproval,
+  ApproverRequestDetail,
   Role,
   Team,
   AdminUser,
@@ -55,8 +56,10 @@ export const cancelRequest = (requestId: number) =>
 export const fetchPendingApprovals = () =>
   api.get<PendingApproval[]>("/api/approver/pending");
 
+// Deprecated candidate: current UI uses /api/approver/pending only.
+// Keep until a dedicated drill-down screen exists or endpoint is removed.
 export const fetchApproverRequestDetail = (requestId: number) =>
-  api.get<PendingApproval>(`/api/approver/requests/${requestId}`);
+  api.get<ApproverRequestDetail>(`/api/approver/requests/${requestId}`);
 
 export const approveRequest = (requestId: number, comment?: string) =>
   api.post<void>(`/api/requests/${requestId}/approve`, { comment });
@@ -91,8 +94,24 @@ export const fetchAdminUsers = (params?: {
   return api.get<AdminUser[]>(`/api/admin/users${qs ? `?${qs}` : ""}`);
 };
 
-export const fetchAuditLogs = () =>
-  api.get<AuditLogEntry[]>("/api/admin/audit-logs");
+export const fetchAuditLogs = (params?: {
+  search?: string;
+  eventType?: string;
+  startDate?: string;
+  endDate?: string;
+  page?: number;
+  pageSize?: number;
+}) => {
+  const q = new URLSearchParams();
+  if (params?.search) q.set("search", params.search);
+  if (params?.eventType) q.set("eventType", params.eventType);
+  if (params?.startDate) q.set("startDate", params.startDate);
+  if (params?.endDate) q.set("endDate", params.endDate);
+  if (params?.page) q.set("page", String(params.page));
+  if (params?.pageSize) q.set("pageSize", String(params.pageSize));
+  const qs = q.toString();
+  return api.get<AuditLogEntry[]>(`/api/admin/audit-logs${qs ? `?${qs}` : ""}`);
+};
 
 export const fetchAdminStats = () => api.get<AdminStats>("/api/admin/stats");
 

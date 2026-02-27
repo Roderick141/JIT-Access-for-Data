@@ -162,7 +162,7 @@ BEGIN
         -- Validate eligibility for ALL roles via sp_User_Eligibility_Check
         DECLARE @IneligibleRoles NVARCHAR(MAX) = '';
         DECLARE @CurrentRoleId INT;
-        DECLARE role_cursor CURSOR FOR SELECT RoleId FROM #ResolvedRoles;
+        DECLARE role_cursor CURSOR LOCAL FAST_FORWARD FOR SELECT RoleId FROM #ResolvedRoles;
         
         OPEN role_cursor;
         FETCH NEXT FROM role_cursor INTO @CurrentRoleId;
@@ -360,7 +360,7 @@ BEGIN
             DECLARE @GrantValidFromUtc DATETIME2 = @CurrentUtc;
             DECLARE @GrantValidToUtc DATETIME2 = DATEADD(MINUTE, @RequestedDurationMinutes, @CurrentUtc);
             
-            DECLARE grant_cursor CURSOR FOR SELECT RoleId FROM #RoleIds;
+            DECLARE grant_cursor CURSOR LOCAL FAST_FORWARD FOR SELECT RoleId FROM #RoleIds;
             OPEN grant_cursor;
             FETCH NEXT FROM grant_cursor INTO @CurrentRoleId;
             

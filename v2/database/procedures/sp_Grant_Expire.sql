@@ -37,7 +37,7 @@ BEGIN
     SET @ExpiredCount = 0;
     
     -- Find expired active grants
-    DECLARE grant_cursor CURSOR FOR
+    DECLARE grant_cursor CURSOR LOCAL FAST_FORWARD FOR
     SELECT g.GrantId, g.UserId, g.UserContextVersionId, u.LoginName
     FROM [jit].[Grants] g
     INNER JOIN [jit].[Users] u ON g.UserId = u.UserId
@@ -60,7 +60,7 @@ BEGIN
             BEGIN TRANSACTION;
             
             -- Get all DB roles for this grant and remove user from each
-            DECLARE role_cursor CURSOR FOR
+            DECLARE role_cursor CURSOR LOCAL FAST_FORWARD FOR
             SELECT dbr.DatabaseName, dbr.DbRoleName, dbr.DbRoleId
             FROM [jit].[Grant_DBRole_Assignments] gdba
             INNER JOIN [jit].[DB_Roles] dbr ON gdba.DbRoleId = dbr.DbRoleId

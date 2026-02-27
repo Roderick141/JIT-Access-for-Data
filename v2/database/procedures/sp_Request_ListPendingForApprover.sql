@@ -43,6 +43,100 @@ BEGIN
         FROM [jit].[vw_User_CurrentContext]
         WHERE UserId = @ApproverUserId
             AND IsEnabled = 1;
+
+    ;WITH RequestEligibility AS (
+        SELECT
+            r.RequestId,
+            CASE
+                WHEN @ApproverIsAdmin = 1 THEN 1
+                WHEN @ApproverIsDataSteward = 1
+                     AND @ApproverDivision IS NOT NULL
+                     AND u.Division IS NOT NULL
+                     AND @ApproverDivision = u.Division THEN 1
+                WHEN @ApproverIsApprover = 1
+                     AND @ApproverDivision IS NOT NULL
+                     AND u.Division IS NOT NULL
+                     AND @ApproverDivision = u.Division
+                     AND (@ApproverSeniority IS NULL OR u.SeniorityLevel IS NULL OR @ApproverSeniority >= u.SeniorityLevel)
+                     AND NOT EXISTS (
+                         SELECT 1
+                         FROM [jit].[Request_Roles] rr2
+                         WHERE rr2.RequestId = r.RequestId
+                           AND NOT (
+                               EXISTS (
+                                   SELECT 1 FROM [jit].[User_To_Role_Eligibility] ue
+                                   WHERE ue.UserId = @ApproverUserId AND ue.RoleId = rr2.RoleId
+                                     AND (ue.ValidFromUtc IS NULL OR ue.ValidFromUtc <= GETUTCDATE())
+                                     AND (ue.ValidToUtc IS NULL OR ue.ValidToUtc >= GETUTCDATE())
+                                     AND ue.CanRequest = 1
+                               )
+                               OR (
+                                   EXISTS (
+                                       SELECT 1 FROM [jit].[Role_Eligibility_Rules] rer
+                                       WHERE rer.RoleId = rr2.RoleId
+                                         AND rer.ScopeType = 'User'
+                                         AND rer.ScopeValue = @ApproverUserId
+                                         AND rer.CanRequest = 1
+                                         AND (rer.ValidFromUtc IS NULL OR rer.ValidFromUtc <= GETUTCDATE())
+                                         AND (rer.ValidToUtc IS NULL OR rer.ValidToUtc >= GETUTCDATE())
+                                   )
+                                   OR EXISTS (
+                                       SELECT 1 FROM [jit].[Role_Eligibility_Rules] rer
+                                       INNER JOIN [jit].[User_Teams] ut ON CAST(ut.TeamId AS NVARCHAR(255)) = rer.ScopeValue
+                                       WHERE rer.RoleId = rr2.RoleId
+                                         AND rer.ScopeType = 'Team'
+                                         AND ut.UserId = @ApproverUserId
+                                         AND ut.IsActive = 1
+                                         AND rer.CanRequest = 1
+                                         AND (rer.ValidFromUtc IS NULL OR rer.ValidFromUtc <= GETUTCDATE())
+                                         AND (rer.ValidToUtc IS NULL OR rer.ValidToUtc >= GETUTCDATE())
+                                   )
+                                   OR EXISTS (
+                                       SELECT 1 FROM [jit].[Role_Eligibility_Rules] rer
+                                       WHERE rer.RoleId = rr2.RoleId
+                                         AND rer.ScopeType = 'Department'
+                                         AND rer.ScopeValue = @ApproverDepartment
+                                         AND @ApproverDepartment IS NOT NULL
+                                         AND rer.CanRequest = 1
+                                         AND (rer.ValidFromUtc IS NULL OR rer.ValidFromUtc <= GETUTCDATE())
+                                         AND (rer.ValidToUtc IS NULL OR rer.ValidToUtc >= GETUTCDATE())
+                                   )
+                                   OR EXISTS (
+                                       SELECT 1 FROM [jit].[Role_Eligibility_Rules] rer
+                                       WHERE rer.RoleId = rr2.RoleId
+                                         AND rer.ScopeType = 'Division'
+                                         AND rer.ScopeValue = @ApproverDivision
+                                         AND @ApproverDivision IS NOT NULL
+                                         AND rer.CanRequest = 1
+                                         AND (rer.ValidFromUtc IS NULL OR rer.ValidFromUtc <= GETUTCDATE())
+                                         AND (rer.ValidToUtc IS NULL OR rer.ValidToUtc >= GETUTCDATE())
+                                   )
+                                   OR EXISTS (
+                                       SELECT 1 FROM [jit].[Role_Eligibility_Rules] rer
+                                       WHERE rer.RoleId = rr2.RoleId
+                                         AND rer.ScopeType = 'All'
+                                         AND rer.ScopeValue IS NULL
+                                         AND rer.CanRequest = 1
+                                         AND (rer.ValidFromUtc IS NULL OR rer.ValidFromUtc <= GETUTCDATE())
+                                         AND (rer.ValidToUtc IS NULL OR rer.ValidToUtc >= GETUTCDATE())
+                                   )
+                               )
+                               AND NOT EXISTS (
+                                   SELECT 1 FROM [jit].[User_To_Role_Eligibility] ue2
+                                   WHERE ue2.UserId = @ApproverUserId AND ue2.RoleId = rr2.RoleId
+                                     AND (ue2.ValidFromUtc IS NULL OR ue2.ValidFromUtc <= GETUTCDATE())
+                                     AND (ue2.ValidToUtc IS NULL OR ue2.ValidToUtc >= GETUTCDATE())
+                                     AND ue2.CanRequest = 0
+                               )
+                           )
+                     ) THEN 1
+                ELSE 0
+            END AS CanApproveRequest
+        FROM [jit].[Requests] r
+        INNER JOIN [jit].[vw_User_CurrentContext] u ON r.UserId = u.UserId
+        WHERE r.Status = 'Pending'
+          AND u.IsEnabled = 1
+    )
     
     -- Get requests where approver can approve ALL roles
     SELECT DISTINCT
@@ -71,208 +165,20 @@ BEGIN
                  AND @ApproverDivision IS NOT NULL 
                  AND u.Division IS NOT NULL 
                  AND @ApproverDivision = u.Division THEN 'DataSteward'
-            WHEN @ApproverIsApprover = 1 
-                 AND @ApproverDivision IS NOT NULL 
-                 AND u.Division IS NOT NULL 
-                 AND @ApproverDivision = u.Division
-                 AND (@ApproverSeniority IS NULL OR u.SeniorityLevel IS NULL OR @ApproverSeniority >= u.SeniorityLevel)
-                 AND NOT EXISTS (
-                     -- Check if there's any role the approver cannot request (using eligibility logic)
-                     SELECT 1 
-                     FROM [jit].[Request_Roles] rr2
-                     WHERE rr2.RequestId = r.RequestId
-                     -- Check if approver CANNOT request this role
-                     AND NOT (
-                         -- Priority 1: Explicit user override allows
-                         EXISTS (
-                             SELECT 1 FROM [jit].[User_To_Role_Eligibility] ue
-                             WHERE ue.UserId = @ApproverUserId AND ue.RoleId = rr2.RoleId
-                             AND (ue.ValidFromUtc IS NULL OR ue.ValidFromUtc <= GETUTCDATE())
-                             AND (ue.ValidToUtc IS NULL OR ue.ValidToUtc >= GETUTCDATE())
-                             AND ue.CanRequest = 1
-                         )
-                         -- Priority 2: OR scope rules allow (only if no user override denies)
-                         OR (
-                             -- User-specific rules
-                             EXISTS (
-                                 SELECT 1 FROM [jit].[Role_Eligibility_Rules] rer
-                                 WHERE rer.RoleId = rr2.RoleId
-                                 AND rer.ScopeType = 'User'
-                                 AND rer.ScopeValue = @ApproverUserId
-                                 AND rer.CanRequest = 1
-                                 AND (rer.ValidFromUtc IS NULL OR rer.ValidFromUtc <= GETUTCDATE())
-                                 AND (rer.ValidToUtc IS NULL OR rer.ValidToUtc >= GETUTCDATE())
-                             )
-                             -- Team rules (user must be active member)
-                             OR EXISTS (
-                                 SELECT 1 FROM [jit].[Role_Eligibility_Rules] rer
-                                 INNER JOIN [jit].[User_Teams] ut ON CAST(ut.TeamId AS NVARCHAR(255)) = rer.ScopeValue
-                                 WHERE rer.RoleId = rr2.RoleId
-                                 AND rer.ScopeType = 'Team'
-                                 AND ut.UserId = @ApproverUserId
-                                 AND ut.IsActive = 1
-                                 AND rer.CanRequest = 1
-                                 AND (rer.ValidFromUtc IS NULL OR rer.ValidFromUtc <= GETUTCDATE())
-                                 AND (rer.ValidToUtc IS NULL OR rer.ValidToUtc >= GETUTCDATE())
-                             )
-                             -- Department rules
-                             OR EXISTS (
-                                 SELECT 1 FROM [jit].[Role_Eligibility_Rules] rer
-                                 WHERE rer.RoleId = rr2.RoleId
-                                 AND rer.ScopeType = 'Department'
-                                 AND rer.ScopeValue = @ApproverDepartment
-                                 AND @ApproverDepartment IS NOT NULL
-                                 AND rer.CanRequest = 1
-                                 AND (rer.ValidFromUtc IS NULL OR rer.ValidFromUtc <= GETUTCDATE())
-                                 AND (rer.ValidToUtc IS NULL OR rer.ValidToUtc >= GETUTCDATE())
-                             )
-                             -- Division rules
-                             OR EXISTS (
-                                 SELECT 1 FROM [jit].[Role_Eligibility_Rules] rer
-                                 WHERE rer.RoleId = rr2.RoleId
-                                 AND rer.ScopeType = 'Division'
-                                 AND rer.ScopeValue = @ApproverDivision
-                                 AND @ApproverDivision IS NOT NULL
-                                 AND rer.CanRequest = 1
-                                 AND (rer.ValidFromUtc IS NULL OR rer.ValidFromUtc <= GETUTCDATE())
-                                 AND (rer.ValidToUtc IS NULL OR rer.ValidToUtc >= GETUTCDATE())
-                             )
-                             -- All rules (lowest priority)
-                             OR EXISTS (
-                                 SELECT 1 FROM [jit].[Role_Eligibility_Rules] rer
-                                 WHERE rer.RoleId = rr2.RoleId
-                                 AND rer.ScopeType = 'All'
-                                 AND rer.ScopeValue IS NULL
-                                 AND rer.CanRequest = 1
-                                 AND (rer.ValidFromUtc IS NULL OR rer.ValidFromUtc <= GETUTCDATE())
-                                 AND (rer.ValidToUtc IS NULL OR rer.ValidToUtc >= GETUTCDATE())
-                             )
-                         )
-                         -- Exclude if user has explicit denial override
-                         AND NOT EXISTS (
-                             SELECT 1 FROM [jit].[User_To_Role_Eligibility] ue2
-                             WHERE ue2.UserId = @ApproverUserId AND ue2.RoleId = rr2.RoleId
-                             AND (ue2.ValidFromUtc IS NULL OR ue2.ValidFromUtc <= GETUTCDATE())
-                             AND (ue2.ValidToUtc IS NULL OR ue2.ValidToUtc >= GETUTCDATE())
-                             AND ue2.CanRequest = 0
-                         )
-                     )
-                 ) THEN 'Approver Eligibility Match'
+            WHEN re.CanApproveRequest = 1 AND @ApproverIsApprover = 1 THEN 'Approver Eligibility Match'
             ELSE 'Unknown'
         END AS ApprovalReason
     FROM [jit].[Requests] r
     INNER JOIN [jit].[Request_Roles] rr ON r.RequestId = rr.RequestId
     INNER JOIN [jit].[Roles] rol ON rr.RoleId = rol.RoleId AND rol.IsActive = 1
-        INNER JOIN [jit].[vw_User_CurrentContext] u ON r.UserId = u.UserId
+    INNER JOIN [jit].[vw_User_CurrentContext] u ON r.UserId = u.UserId
+    INNER JOIN RequestEligibility re ON re.RequestId = r.RequestId
     WHERE r.Status = 'Pending'
-            AND u.IsEnabled = 1
+      AND u.IsEnabled = 1
+      AND re.CanApproveRequest = 1
     GROUP BY r.RequestId, r.UserId, u.DisplayName, u.LoginName, u.Email, u.Department, u.Division, 
-             u.SeniorityLevel, r.RequestedDurationMinutes, r.Justification, r.TicketRef, 
-             r.UserDeptSnapshot, r.UserTitleSnapshot, r.CreatedUtc, r.Status
-    HAVING 
-        -- Admin can approve all requests
-        @ApproverIsAdmin = 1
-        OR
-        -- Data Steward can approve requests from same division
-        (
-            @ApproverIsDataSteward = 1
-            AND @ApproverDivision IS NOT NULL 
-            AND u.Division IS NOT NULL 
-            AND @ApproverDivision = u.Division
-        )
-        OR
-        -- IsApprover can approve requests where they can request ALL roles AND have higher/equal seniority
-        (
-            @ApproverIsApprover = 1
-            -- Same division
-            AND @ApproverDivision IS NOT NULL 
-            AND u.Division IS NOT NULL 
-            AND @ApproverDivision = u.Division
-            -- Approver seniority >= requester seniority
-            AND (@ApproverSeniority IS NULL OR u.SeniorityLevel IS NULL OR @ApproverSeniority >= u.SeniorityLevel)
-            -- Check that approver can request ALL roles (no role fails the eligibility check)
-            AND NOT EXISTS (
-                SELECT 1 
-                FROM [jit].[Request_Roles] rr2
-                WHERE rr2.RequestId = r.RequestId
-                -- Check if approver CANNOT request this role (using eligibility logic)
-                AND NOT (
-                    -- Priority 1: Explicit user override allows
-                    EXISTS (
-                        SELECT 1 FROM [jit].[User_To_Role_Eligibility] ue
-                        WHERE ue.UserId = @ApproverUserId AND ue.RoleId = rr2.RoleId
-                        AND (ue.ValidFromUtc IS NULL OR ue.ValidFromUtc <= GETUTCDATE())
-                        AND (ue.ValidToUtc IS NULL OR ue.ValidToUtc >= GETUTCDATE())
-                        AND ue.CanRequest = 1
-                    )
-                    -- Priority 2: OR scope rules allow (only if no user override denies)
-                    OR (
-                        -- User-specific rules
-                        EXISTS (
-                            SELECT 1 FROM [jit].[Role_Eligibility_Rules] rer
-                            WHERE rer.RoleId = rr2.RoleId
-                            AND rer.ScopeType = 'User'
-                            AND rer.ScopeValue = @ApproverUserId
-                            AND rer.CanRequest = 1
-                            AND (rer.ValidFromUtc IS NULL OR rer.ValidFromUtc <= GETUTCDATE())
-                            AND (rer.ValidToUtc IS NULL OR rer.ValidToUtc >= GETUTCDATE())
-                        )
-                        -- Team rules (user must be active member)
-                        OR EXISTS (
-                            SELECT 1 FROM [jit].[Role_Eligibility_Rules] rer
-                            INNER JOIN [jit].[User_Teams] ut ON CAST(ut.TeamId AS NVARCHAR(255)) = rer.ScopeValue
-                            WHERE rer.RoleId = rr2.RoleId
-                            AND rer.ScopeType = 'Team'
-                            AND ut.UserId = @ApproverUserId
-                            AND ut.IsActive = 1
-                            AND rer.CanRequest = 1
-                            AND (rer.ValidFromUtc IS NULL OR rer.ValidFromUtc <= GETUTCDATE())
-                            AND (rer.ValidToUtc IS NULL OR rer.ValidToUtc >= GETUTCDATE())
-                        )
-                         -- Department rules
-                         OR EXISTS (
-                             SELECT 1 FROM [jit].[Role_Eligibility_Rules] rer
-                             WHERE rer.RoleId = rr2.RoleId
-                             AND rer.ScopeType = 'Department'
-                             AND rer.ScopeValue = @ApproverDepartment
-                             AND @ApproverDepartment IS NOT NULL
-                             AND rer.CanRequest = 1
-                             AND (rer.ValidFromUtc IS NULL OR rer.ValidFromUtc <= GETUTCDATE())
-                             AND (rer.ValidToUtc IS NULL OR rer.ValidToUtc >= GETUTCDATE())
-                         )
-                        -- Division rules
-                        OR EXISTS (
-                            SELECT 1 FROM [jit].[Role_Eligibility_Rules] rer
-                            WHERE rer.RoleId = rr2.RoleId
-                            AND rer.ScopeType = 'Division'
-                            AND rer.ScopeValue = @ApproverDivision
-                            AND @ApproverDivision IS NOT NULL
-                            AND rer.CanRequest = 1
-                            AND (rer.ValidFromUtc IS NULL OR rer.ValidFromUtc <= GETUTCDATE())
-                            AND (rer.ValidToUtc IS NULL OR rer.ValidToUtc >= GETUTCDATE())
-                        )
-                        -- All rules (lowest priority)
-                        OR EXISTS (
-                            SELECT 1 FROM [jit].[Role_Eligibility_Rules] rer
-                            WHERE rer.RoleId = rr2.RoleId
-                            AND rer.ScopeType = 'All'
-                            AND rer.ScopeValue IS NULL
-                            AND rer.CanRequest = 1
-                            AND (rer.ValidFromUtc IS NULL OR rer.ValidFromUtc <= GETUTCDATE())
-                            AND (rer.ValidToUtc IS NULL OR rer.ValidToUtc >= GETUTCDATE())
-                        )
-                    )
-                    -- Exclude if user has explicit denial override
-                    AND NOT EXISTS (
-                        SELECT 1 FROM [jit].[User_To_Role_Eligibility] ue2
-                        WHERE ue2.UserId = @ApproverUserId AND ue2.RoleId = rr2.RoleId
-                        AND (ue2.ValidFromUtc IS NULL OR ue2.ValidFromUtc <= GETUTCDATE())
-                        AND (ue2.ValidToUtc IS NULL OR ue2.ValidToUtc >= GETUTCDATE())
-                        AND ue2.CanRequest = 0
-                    )
-                )
-            )
-        )
+             u.SeniorityLevel, r.RequestedDurationMinutes, r.Justification, r.TicketRef,
+             r.UserDeptSnapshot, r.UserTitleSnapshot, r.CreatedUtc, r.Status, re.CanApproveRequest
     ORDER BY r.CreatedUtc ASC;
 END
 GO

@@ -42,7 +42,7 @@ interface RoleMapped {
 }
 
 interface RoleUser {
-  id: number;
+  id: string;
   name: string;
   email: string;
   department: string;

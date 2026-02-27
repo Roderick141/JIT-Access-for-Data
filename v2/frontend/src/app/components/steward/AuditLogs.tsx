@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { fetchAuditLogs } from "@/api/endpoints";
 import type { AuditLogEntry } from "@/api/types";
 import { formatDateTimeMinute, toAuditActor, toAuditSummary, toFriendlyAuditEvent } from "@/app/components/shared/auditDisplay";
@@ -10,47 +10,31 @@ export function AuditLogs() {
   const [search, setSearch] = useState("");
   const [eventType, setEventType] = useState("");
   const [page, setPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const load = () => {
     setLoading(true);
-    fetchAuditLogs()
-      .then(setRows)
+    setError(null);
+    fetchAuditLogs({ search, eventType, page, pageSize: PAGE_SIZE })
+      .then((data) => {
+        setRows(data);
+        setTotalCount(data.length > 0 && data[0].TotalCount != null ? Number(data[0].TotalCount) : 0);
+      })
       .catch((e) => setError(e.message ?? "Failed to load audit logs."))
       .finally(() => setLoading(false));
   };
-  useEffect(load, []);
+  useEffect(load, [search, eventType, page]);
 
-  const filtered = useMemo(
-    () =>
-      rows.filter((r) => {
-        const byType = !eventType || String(r.EventType) === eventType;
-        const s = search.toLowerCase();
-        const bySearch =
-          !s ||
-          String(r.EventType ?? "").toLowerCase().includes(s) ||
-          String(toFriendlyAuditEvent(r.EventType)).toLowerCase().includes(s) ||
-          String(toAuditActor(r)).toLowerCase().includes(s) ||
-          String(r.TargetDisplayName ?? "").toLowerCase().includes(s) ||
-          String(r.RoleName ?? "").toLowerCase().includes(s) ||
-          String(r.RoleNames ?? "").toLowerCase().includes(s) ||
-          String(r.DisplayMessage ?? "").toLowerCase().includes(s) ||
-          String(r.Details ?? "").toLowerCase().includes(s) ||
-          String(r.AuditLogId ?? "").toLowerCase().includes(s);
-        return byType && bySearch;
-      }),
-    [rows, search, eventType]
-  );
-
-  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const pageCount = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+  const hasNextPage = page < pageCount;
   const eventTypes = Array.from(new Set(rows.map((x) => String(x.EventType ?? "")))).filter(Boolean);
 
   function exportCsv() {
     const header = ["AuditLogId", "Time", "Event", "Actor", "Target", "Role", "Summary", "RawDetails"];
     const lines = [header.join(",")].concat(
-      filtered.map((r) =>
+      rows.map((r) =>
         [
           r.AuditLogId,
           `"${String(formatDateTimeMinute(r.EventUtc)).replaceAll('"', '""')}"`,
@@ -79,7 +63,10 @@ export function AuditLogs() {
       <div className="flex flex-wrap gap-2">
         <input
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setPage(1);
+          }}
           placeholder="Search audit logs..."
           className="rounded-lg border border-input bg-input-background px-3 py-2 text-sm"
         />
@@ -115,7 +102,7 @@ export function AuditLogs() {
             </tr>
           </thead>
           <tbody>
-            {paged.map((r) => (
+            {rows.map((r) => (
               <tr key={r.AuditLogId} className="border-b border-border">
                 <td className="p-3">{formatDateTimeMinute(r.EventUtc)}</td>
                 <td className="p-3">{toFriendlyAuditEvent(r.EventType)}</td>
@@ -132,11 +119,9 @@ export function AuditLogs() {
         <button disabled={page <= 1} onClick={() => setPage((p) => p - 1)} className="rounded border px-2 py-1 disabled:opacity-50">
           Prev
         </button>
-        <span>
-          Page {page} / {pageCount}
-        </span>
+        <span>Page {page} / {pageCount}</span>
         <button
-          disabled={page >= pageCount}
+          disabled={!hasNextPage}
           onClick={() => setPage((p) => p + 1)}
           className="rounded border px-2 py-1 disabled:opacity-50"
         >

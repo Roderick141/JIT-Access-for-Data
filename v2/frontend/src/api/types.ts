@@ -10,7 +10,8 @@
 // ---------------------------------------------------------------------------
 
 export interface CurrentUser {
-  UserId: number;
+  UserId: string;
+  UserContextVersionId?: number | null;
   LoginName: string;
   GivenName: string | null;
   Surname: string | null;
@@ -23,6 +24,7 @@ export interface CurrentUser {
   IsAdmin: boolean;
   IsApprover: boolean;
   IsDataSteward: boolean;
+  IsEnabled?: boolean;
   IsActive: boolean;
 }
 
@@ -49,7 +51,7 @@ export interface Grant {
 
 export interface UserRequest {
   RequestId: number;
-  UserId: number;
+  UserId: string;
   Status: string;
   RequestedDurationMinutes: number;
   Justification: string | null;
@@ -87,7 +89,7 @@ export interface RequestableRole {
 
 export interface PendingApproval {
   RequestId: number;
-  UserId: number;
+  UserId: string;
   RequesterName: string;
   RequesterEmail?: string;
   RequesterDepartment?: string;
@@ -99,6 +101,27 @@ export interface PendingApproval {
   TicketRef?: string | null;
   CreatedUtc: string;
   Status: string;
+  [key: string]: unknown;
+}
+
+export interface ApproverRequestDetail {
+  RequestId: number;
+  UserId: string;
+  RequestedDurationMinutes: number;
+  Justification: string | null;
+  TicketRef?: string | null;
+  Status: string;
+  UserDeptSnapshot?: string | null;
+  UserTitleSnapshot?: string | null;
+  CreatedUtc: string;
+  UpdatedUtc?: string | null;
+  RequesterName?: string;
+  RequesterLoginName?: string;
+  RequesterEmail?: string;
+  RequesterDepartment?: string;
+  RequesterDivision?: string;
+  RequesterSeniority?: number | null;
+  Roles?: Array<Record<string, unknown>>;
   [key: string]: unknown;
 }
 
@@ -130,6 +153,8 @@ export interface Team {
   TeamId: number;
   TeamName: string;
   TeamDescription: string | null;
+  Department?: string | null;
+  MemberCount?: number;
   IsActive: boolean;
   [key: string]: unknown;
 }
@@ -139,7 +164,7 @@ export interface Team {
 // ---------------------------------------------------------------------------
 
 export interface AdminUser {
-  UserId: number;
+  UserId: string;
   LoginName: string;
   GivenName: string | null;
   Surname: string | null;
@@ -152,6 +177,7 @@ export interface AdminUser {
   IsAdmin: boolean;
   IsApprover: boolean;
   IsDataSteward: boolean;
+  IsEnabled?: boolean;
   IsActive: boolean;
   TotalCount?: number;
   [key: string]: unknown;
@@ -162,6 +188,7 @@ export interface AdminUser {
 // ---------------------------------------------------------------------------
 
 export interface AuditLogEntry {
+  TotalCount?: number;
   AuditLogId: number;
   EventType: string;
   EventUtc: string;

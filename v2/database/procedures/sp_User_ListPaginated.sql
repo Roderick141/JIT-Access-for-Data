@@ -24,7 +24,8 @@ BEGIN
       )
       AND (@Status = '' OR (@Status = 'active' AND u.IsEnabled = 1) OR (@Status = 'inactive' AND u.IsEnabled = 0))
     ORDER BY u.DisplayName
-    OFFSET ((@PageNumber - 1) * @PageSize) ROWS FETCH NEXT @PageSize ROWS ONLY;
+    OFFSET ((@PageNumber - 1) * @PageSize) ROWS FETCH NEXT @PageSize ROWS ONLY
+    OPTION (RECOMPILE);
 END
 GO
 

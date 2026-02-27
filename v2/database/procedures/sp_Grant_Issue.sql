@@ -114,7 +114,7 @@ BEGIN
         SET @GrantId = SCOPE_IDENTITY();
         
         -- Get all DB roles for this business role and add user to each
-        DECLARE role_cursor CURSOR FOR
+        DECLARE role_cursor CURSOR LOCAL FAST_FORWARD FOR
         SELECT DISTINCT dbr.DatabaseName, dbr.DbRoleName, dbr.DbRoleId
         FROM [jit].[DB_Roles] dbr
         INNER JOIN [jit].[Role_To_DB_Roles] rtdbr ON dbr.DbRoleId = rtdbr.DbRoleId

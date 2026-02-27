@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
 import { Search, Shield, UserCog } from "lucide-react";
-import { fetchAdminUsers, updateUserSystemRoles } from "@/api/endpoints";
-import type { AdminUser } from "@/api/types";
+import { fetchAdminUsers, fetchAdminLookups, updateUserSystemRoles } from "@/api/endpoints";
+import type { AdminUser, LookupRow } from "@/api/types";
 
 interface UserMapped {
-  id: number;
+  id: string;
   loginName: string;
   name: string;
   email: string;
@@ -22,7 +22,7 @@ function mapUser(u: AdminUser): UserMapped {
     name: u.DisplayName,
     email: u.Email ?? "",
     department: u.Department ?? "",
-    status: u.IsActive ? "Active" : "Inactive",
+    status: (u.IsEnabled ?? u.IsActive) ? "Active" : "Inactive",
     isAdmin: u.IsAdmin,
     isDataSteward: u.IsDataSteward,
     isApprover: u.IsApprover,
@@ -41,6 +41,7 @@ export function ManageUsers() {
   const [departmentFilter, setDepartmentFilter] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [departmentOptions, setDepartmentOptions] = useState<string[]>([]);
 
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserMapped | null>(null);
@@ -76,6 +77,18 @@ export function ManageUsers() {
   useEffect(() => {
     loadUsers();
   }, [loadUsers]);
+
+  useEffect(() => {
+    fetchAdminLookups()
+      .then((rows) => {
+        const departments = (rows as LookupRow[])
+          .filter((r) => r.LookupType === "departments")
+          .map((r) => r.LookupValue)
+          .filter(Boolean);
+        setDepartmentOptions(Array.from(new Set(departments)).sort((a, b) => a.localeCompare(b)));
+      })
+      .catch(() => setDepartmentOptions([]));
+  }, []);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -171,6 +184,11 @@ export function ManageUsers() {
             className="rounded-lg border border-input bg-input-background px-4 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
           >
             <option value="">All Departments</option>
+            {departmentOptions.map((dept) => (
+              <option key={dept} value={dept}>
+                {dept}
+              </option>
+            ))}
           </select>
           <select
             value={roleFilter}

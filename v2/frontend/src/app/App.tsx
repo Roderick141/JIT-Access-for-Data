@@ -152,8 +152,9 @@ export default function App() {
     if (tab.id === "my-access") {
       setMyAccessOpen(!myAccessOpen);
     } else if (tab.route) {
+      setMyAccessOpen(false);
       navigate(tab.route);
-      } else {
+    } else {
       setMyAccessOpen(false);
     }
   };

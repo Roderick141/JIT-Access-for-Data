@@ -1,7 +1,7 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 
 from auth import get_current_user, require_approver
-from db import execute_query, execute_sp
+from db import execute_sp
 from schemas.common import success
 
 router = APIRouter(prefix="/api/approver", tags=["approver"])
@@ -16,24 +16,14 @@ def pending(user=Depends(get_current_user)):
 
 @router.get("/requests/{request_id}")
 def request_detail(request_id: int, user=Depends(get_current_user)):
+    # NOTE: Candidate for removal. Current UI is fully served by /pending,
+    # and this endpoint currently exists for optional future drill-down UX.
     require_approver(user)
-    rows = execute_query(
-        """
-        SELECT
-            r.RequestId, r.UserId, r.RequestedDurationMinutes, r.Justification, r.TicketRef,
-            r.Status, r.UserDeptSnapshot, r.UserTitleSnapshot, r.CreatedUtc, r.UpdatedUtc,
-            u.DisplayName AS RequesterName, u.LoginName AS RequesterLoginName,
-            u.Email AS RequesterEmail, u.Department AS RequesterDepartment,
-            u.Division AS RequesterDivision, u.SeniorityLevel AS RequesterSeniority
-        FROM jit.Requests r
-        INNER JOIN jit.vw_User_CurrentContext u ON u.UserId = r.UserId
-        WHERE r.RequestId = ?
-        """,
-        [request_id],
-    )
-    detail = rows[0] if rows else None
+    pending_rows = execute_sp("jit.sp_Request_ListPendingForApprover", {"ApproverUserId": user["UserId"]}) or []
+    detail = next((row for row in pending_rows if int(row.get("RequestId", -1)) == request_id), None)
     roles = execute_sp("jit.sp_Request_GetRoles", {"RequestId": request_id})
-    if detail is not None:
-        detail["Roles"] = roles or []
+    if detail is None:
+        raise HTTPException(status_code=404, detail="Request not found in approver pending queue.")
+    detail["Roles"] = roles or []
     return success(detail)
 

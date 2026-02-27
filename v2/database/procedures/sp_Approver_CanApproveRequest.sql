@@ -104,13 +104,13 @@ BEGIN
     BEGIN
         -- Check if approver can approve ALL roles
         -- For each role: approver must be able to request it AND have seniority >= requester
-        DECLARE @ApprovableRoleCount INT = 0;
+        DECLARE @CanApproveAllRoles BIT = 1;
         DECLARE @RoleId INT;
         DECLARE @CanRequestRole BIT;
         DECLARE @EligibilityReason NVARCHAR(255);
         
         -- Cursor to check each role
-        DECLARE role_cursor CURSOR FOR
+        DECLARE role_cursor CURSOR LOCAL FAST_FORWARD FOR
             SELECT rr.RoleId
             FROM [jit].[Request_Roles] rr
             WHERE rr.RequestId = @RequestId;
@@ -133,7 +133,13 @@ BEGIN
             IF @CanRequestRole = 1
                AND (@ApproverSeniority IS NULL OR @RequesterSeniority IS NULL OR @ApproverSeniority >= @RequesterSeniority)
             BEGIN
-                SET @ApprovableRoleCount = @ApprovableRoleCount + 1;
+                -- role is approvable, continue
+                SET @CanApproveAllRoles = @CanApproveAllRoles;
+            END
+            ELSE
+            BEGIN
+                SET @CanApproveAllRoles = 0;
+                BREAK;
             END
             
             FETCH NEXT FROM role_cursor INTO @RoleId;
@@ -143,7 +149,7 @@ BEGIN
         DEALLOCATE role_cursor;
         
         -- Approver can approve only if they can approve ALL roles
-        IF @ApprovableRoleCount = @RoleCount
+        IF @CanApproveAllRoles = 1
         BEGIN
             SET @CanApprove = 1;
             SET @ApprovalReason = 'ApproverEligibilityMatch';
